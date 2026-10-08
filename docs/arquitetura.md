@@ -100,6 +100,27 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 - `Lead.NextFollowUpAt` é **derivado** da tarefa aberta mais próxima do lead e recalculado na mesma transação. Concluir um follow-up, ligação ou mensagem registra o último contato.
 - **Macros:** template com **lista branca** de variáveis (`{{lead.first_name}}`, `{{agent.name}}`…). Variável desconhecida é recusada ao salvar, e o valor é inserido literalmente, sem reavaliação. A renderização exige que o lead esteja no escopo do usuário, então uma macro não vaza dados. Nada é enviado; o envio entra na Fase 3.
 
+## Acessos externos, sugestões e painel do desenvolvedor
+
+### Modo visitante e modo desenvolvedor
+- O administrador (`users.manage`) gera um **link de acesso** em *Configurações › Acessos externos*, com validade de 1 a 30 dias, para o papel **Visitante** ou **Desenvolvedor**.
+- Cada link cria um **usuário convidado próprio**: sem senha, sem login por e-mail e com vínculo que expira junto com o link. **Revogar** encerra o vínculo e as sessões imediatamente.
+- O token aparece **uma única vez**. O banco guarda só o hash SHA-256. O link usa o **fragmento** (`/acesso#token`), que o navegador não envia ao servidor, então o token não aparece em logs nem em Referer, e a página remove o token da barra de endereço.
+- Os papéis convidados **não têm `pii.view`**. A API devolve nome abreviado ("Mariana S."), telefone e e-mail mascarados, e observações e motivos ocultos (inclusive no histórico e na auditoria). Sem `pii.view`, a busca por telefone ou e-mail fica desabilitada, para evitar que alguém "descubra" dados mascarados.
+- Os dois papéis são **somente leitura**: não têm capabilities de escrita, e isso é imposto no servidor. O desenvolvedor tem ainda `audit.read`, `dev.tools` e a gestão de sugestões.
+
+### Sugerir mudança
+- Botão flutuante em todas as telas (`suggestions.create`, disponível para todos os papéis). Registra tipo, resumo, detalhes, página (sem query string), tamanho da tela e, opcionalmente, o **elemento apontado**: uma descrição legível mais o caminho CSS.
+- A descrição do elemento só usa **texto de interface** (botões, títulos, colunas, rótulos). O conteúdo de células e cards não é registrado, e sequências numéricas e e-mails são ocultados.
+- Em `/sugestoes`, o autor vê as próprias sugestões (`suggestions.read: Own`). Admin e desenvolvedor veem todas (`Org`) e fazem a triagem (status, prioridade) com comentários (`suggestions.manage`).
+
+### Painel do desenvolvedor (`/desenvolvedor`, `dev.tools`)
+- **Sistema:** ambiente, versão (com o commit), runtime, versão do banco e migrations aplicadas/pendentes. Um botão copia o diagnóstico.
+- **Fila de eventos:** contagem do outbox (aguardando, em nova tentativa, falha definitiva, processados em 24h) e falhas recentes.
+- **Auditoria:** trilha filtrável, com textos livres ocultos.
+- **Mapa da API:** gerado das rotas registradas, então está sempre em sincronia com o código.
+- **Permissões:** matriz de papéis × capabilities e as permissões da sessão atual.
+
 ## Roadmap
 
 | Fase | Escopo | Saída |
@@ -107,6 +128,7 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 | **0 — Fundação** ✅ | Solution, auth, RBAC, tenancy, auditoria, outbox, testes de isolamento | Base segura |
 | **1 — CRM + Kanban** ✅ | Leads, contatos, pipeline configurável, Kanban, histórico | Uso interno sem IA |
 | **2 — Agenda e rotina** ✅ | BusinessCalendarService (NodaTime, feriados), jornada do corretor, visitas, tarefas, macros | Agenda real |
+| **2.5 — Acessos externos** ✅ | Modo visitante/desenvolvedor por link, mascaramento de dados pessoais, sugestões de mudança, painel técnico | Compartilhar e colaborar com segurança |
 | 3 — Atendimento humano | Inbox, provider WhatsApp (webhook HMAC, idempotência, janela de 24h, templates) | Conversas no CRM |
 | 4 — Automações | Motor de regras, gatilhos temporais em dias úteis, painel de execuções | Rotina automatizada |
 | 5 — Call Manager | Filas, campanhas, scripts, resultados configuráveis | Cold call |

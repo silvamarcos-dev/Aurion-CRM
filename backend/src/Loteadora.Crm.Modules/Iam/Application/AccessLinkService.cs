@@ -40,7 +40,7 @@ public sealed class AccessLinkService(AppDbContext db, ICurrentActor actor, Requ
 
         var now = clock.GetUtcNow();
         var expiresAt = now.AddDays(cmd.ExpiresInDays);
-        var guest = User.CreateGuest($"{cmd.Label.Trim()} ({cmd.Role})");
+        var guest = User.CreateGuest(cmd.Label.Trim());
         var membership = new Membership(actor.OrganizationId, guest.Id, role.Id, teamId: null);
         membership.ExpireAt(expiresAt);
 
