@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Loteadora.Crm.Api/Loteadora.Crm.Api.csproj" />
+    <Project Path="src/Loteadora.Crm.Modules/Loteadora.Crm.Modules.csproj" />
+    <Project Path="src/Loteadora.Crm.SharedKernel/Loteadora.Crm.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Loteadora.Crm.Tests/Loteadora.Crm.Tests.csproj" />
+  </Folder>
+</Solution>

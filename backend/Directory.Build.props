@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <NoWarn>$(NoWarn);CA1062;CA1848;CA1305;CA1307;CA1310;CA1309;CA1304;CA1311;CA1862;CA1716;CA1711;CA2007;CA1031;CA1852;CA1812;CA1515;CA1056;CA1054;CA1002;CA1819;CA2227;CA1724;CA1032;CA1064;CA1805;CA1822;CA1859;CA1860;CA1863;CA1873;CA1869;CA5394</NoWarn>
+  </PropertyGroup>
+</Project>
