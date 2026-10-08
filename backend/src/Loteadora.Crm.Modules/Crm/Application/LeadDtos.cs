@@ -25,7 +25,6 @@ public sealed record UpdateLeadCommand(
     string? Region,
     string? Notes,
     IReadOnlyList<string>? Tags,
-    DateTimeOffset? NextFollowUpAt,
     uint ExpectedVersion);
 
 public sealed record MoveLeadCommand(Guid StageId, string? Reason, uint ExpectedVersion);

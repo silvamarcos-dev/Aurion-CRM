@@ -16,6 +16,8 @@ public sealed class CrmExceptionHandler(IProblemDetailsService problemDetails, I
             ConcurrencyException e => (StatusCodes.Status409Conflict, e.Message, "concurrency_conflict"),
             DomainException e => (StatusCodes.Status422UnprocessableEntity, e.Message, e.Code),
             BadHttpRequestException => (StatusCodes.Status400BadRequest, "Requisição inválida.", "bad_request"),
+            HttpRequestException or TaskCanceledException when !httpContext.RequestAborted.IsCancellationRequested =>
+                (StatusCodes.Status502BadGateway, "Serviço externo indisponível. Tente novamente mais tarde.", "upstream_unavailable"),
             _ => (StatusCodes.Status500InternalServerError, "Erro interno.", "internal_error"),
         };
 

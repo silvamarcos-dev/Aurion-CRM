@@ -49,6 +49,16 @@ public sealed class User : Entity, IHasTimestamps
         DisplayName = displayName;
     }
 
+    /// <summary>Usuário convidado (acesso por link, sem senha). Nunca autentica por e-mail/senha.</summary>
+    public static User CreateGuest(string displayName)
+    {
+        var user = new User($"convidado-{Guid.NewGuid():N}@convidado.invalid", displayName) { IsGuest = true };
+        user.PasswordHash = "";
+        return user;
+    }
+
+    public bool IsGuest { get; private set; }
+
     public string Email { get; private set; } = default!;
     public string DisplayName { get; private set; } = default!;
     public string PasswordHash { get; private set; } = default!;
@@ -156,8 +166,16 @@ public sealed class Membership : Entity, ITenantOwned, IHasTimestamps
     public Guid RoleId { get; private set; }
     public Guid? TeamId { get; private set; }
     public MembershipStatus Status { get; private set; } = MembershipStatus.Active;
+
+    /// <summary>Vínculos temporários (convidados) expiram automaticamente.</summary>
+    public DateTimeOffset? ExpiresAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    public bool IsActive(DateTimeOffset now) => Status == MembershipStatus.Active && (ExpiresAt is null || ExpiresAt > now);
+
+    public void ExpireAt(DateTimeOffset expiresAt) => ExpiresAt = expiresAt;
 
     public void Revoke() => Status = MembershipStatus.Revoked;
 }

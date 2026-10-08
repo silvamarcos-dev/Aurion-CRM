@@ -1,6 +1,6 @@
 # Segredos locais
 .env
-.env.*
+.env.*local
 !.env.example
 
 # .NET

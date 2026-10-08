@@ -49,6 +49,7 @@ public static class DirectoryEndpoints
     {
         api.MapGet("/me", (DirectoryService service, CancellationToken ct) => service.GetMeAsync(ct)).WithTags("Directory");
         api.MapGet("/users/assignable", (DirectoryService service, CancellationToken ct) => service.ListAssignableAsync(ct)).WithTags("Directory");
+        api.MapGet("/users/in-scope", (string capability, DirectoryService service, CancellationToken ct) => service.ListInScopeAsync(capability, ct)).WithTags("Directory");
     }
 }
 

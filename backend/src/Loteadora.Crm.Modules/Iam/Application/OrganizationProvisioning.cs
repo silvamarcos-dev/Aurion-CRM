@@ -54,6 +54,8 @@ public sealed class OrganizationProvisioning(IServiceScopeFactory scopes)
             userIds[user.Email] = user.Id;
         }
 
+        db.CalendarSettings.Add(BusinessCalendar.Domain.CalendarSettings.CreateDefault(organization.Id));
+
         var pipeline = new SalesPipeline(organization.Id, "Funil comercial", isDefault: true);
         var stageIds = DefaultStages.Select(s => pipeline.AddStage(s.Name, s.Kind, s.Color).Id).ToList();
         db.Pipelines.Add(pipeline);

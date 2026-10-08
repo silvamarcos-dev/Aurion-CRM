@@ -105,6 +105,186 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                     b.ToTable("audit_events", "audit");
                 });
 
+            modelBuilder.Entity("Loteadora.Crm.Modules.BusinessCalendar.Domain.CalendarException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<TimeOnly?>("End")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("end");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<TimeOnly?>("Start")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("start");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_exceptions");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_exceptions_organization_id");
+
+                    b.HasIndex("OrganizationId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("ix_exceptions_organization_id_date");
+
+                    b.ToTable("exceptions", "calendar");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.BusinessCalendar.Domain.CalendarSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BusinessHours")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("business_hours");
+
+                    b.Property<string>("CityIbgeCode")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("city_ibge_code");
+
+                    b.Property<string>("Coverage")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("coverage");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("StateCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("state_code");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_settings");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_settings_organization_id");
+
+                    b.ToTable("settings", "calendar");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.BusinessCalendar.Domain.Holiday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CityIbgeCode")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("city_ibge_code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_confirmed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("StateCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("state_code");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_holidays");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_holidays_organization_id");
+
+                    b.HasIndex("OrganizationId", "Date", "Scope", "StateCode", "CityIbgeCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_holidays_organization_id_date_scope_state_code_city_ibge_co");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("OrganizationId", "Date", "Scope", "StateCode", "CityIbgeCode"), false);
+
+                    b.ToTable("holidays", "calendar");
+                });
+
             modelBuilder.Entity("Loteadora.Crm.Modules.Crm.Domain.Contact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -367,6 +547,91 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                     b.ToTable("lead_stage_transitions", "crm");
                 });
 
+            modelBuilder.Entity("Loteadora.Crm.Modules.Iam.Domain.AccessLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("GuestUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("guest_user_id");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("label");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("role_name");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UseCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("use_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_access_links");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_access_links_created_by_id");
+
+                    b.HasIndex("GuestUserId")
+                        .HasDatabaseName("ix_access_links_guest_user_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_access_links_organization_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_access_links_token_hash");
+
+                    b.ToTable("access_links", "iam");
+                });
+
             modelBuilder.Entity("Loteadora.Crm.Modules.Iam.Domain.Membership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -377,6 +642,10 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid")
@@ -637,6 +906,10 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsGuest")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_guest");
+
                     b.Property<DateTimeOffset?>("LockedUntil")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("locked_until");
@@ -659,6 +932,77 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .HasDatabaseName("ix_users_email");
 
                     b.ToTable("users", "iam");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Macros.Domain.Macro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("DevelopmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("development_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<string>("Shortcut")
+                        .IsRequired()
+                        .HasMaxLength(33)
+                        .HasColumnType("character varying(33)")
+                        .HasColumnName("shortcut");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("usage_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_macros");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_macros_organization_id");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_macros_owner_user_id");
+
+                    b.HasIndex("OrganizationId", "OwnerUserId", "Shortcut")
+                        .IsUnique()
+                        .HasDatabaseName("ix_macros_organization_id_owner_user_id_shortcut");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("OrganizationId", "OwnerUserId", "Shortcut"), false);
+
+                    b.ToTable("macros", "macros");
                 });
 
             modelBuilder.Entity("Loteadora.Crm.Modules.Outbox.OutboxMessage", b =>
@@ -809,6 +1153,474 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                     b.ToTable("pipelines", "pipeline");
                 });
 
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.Absence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ends_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_absences");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_absences_organization_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_absences_user_id");
+
+                    b.HasIndex("OrganizationId", "UserId", "StartsAt")
+                        .HasDatabaseName("ix_absences_organization_id_user_id_starts_at");
+
+                    b.ToTable("absences", "scheduling");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.AgentSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("BufferMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("buffer_minutes");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("MaxVisitsPerDay")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_visits_per_day");
+
+                    b.Property<int>("MinNoticeMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_notice_minutes");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("VisitDurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("visit_duration_minutes");
+
+                    b.Property<string>("WorkBlocks")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("work_blocks");
+
+                    b.Property<bool>("WorksOnHolidays")
+                        .HasColumnType("boolean")
+                        .HasColumnName("works_on_holidays");
+
+                    b.HasKey("Id")
+                        .HasName("pk_agent_schedules");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_agent_schedules_organization_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_agent_schedules_user_id");
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_agent_schedules_organization_id_user_id");
+
+                    b.ToTable("agent_schedules", "scheduling");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_user_id");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("cancel_reason");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("CreatedByKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("created_by_kind");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ends_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_appointments");
+
+                    b.HasIndex("AgentUserId")
+                        .HasDatabaseName("ix_appointments_agent_user_id");
+
+                    b.HasIndex("LeadId")
+                        .HasDatabaseName("ix_appointments_lead_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_appointments_organization_id");
+
+                    b.HasIndex("OrganizationId", "LeadId")
+                        .HasDatabaseName("ix_appointments_organization_id_lead_id");
+
+                    b.HasIndex("OrganizationId", "AgentUserId", "StartsAt")
+                        .HasDatabaseName("ix_appointments_organization_id_agent_user_id_starts_at");
+
+                    b.ToTable("appointments", "scheduling");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Suggestions.Domain.ChangeSuggestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ElementDescriptor")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("element_descriptor");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("PagePath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("page_path");
+
+                    b.Property<string>("PageTitle")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)")
+                        .HasColumnName("page_title");
+
+                    b.Property<string>("Priority")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Viewport")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("viewport");
+
+                    b.HasKey("Id")
+                        .HasName("pk_suggestions");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_suggestions_author_user_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_suggestions_organization_id");
+
+                    b.HasIndex("OrganizationId", "AuthorUserId")
+                        .HasDatabaseName("ix_suggestions_organization_id_author_user_id");
+
+                    b.HasIndex("OrganizationId", "Status", "CreatedAt")
+                        .HasDatabaseName("ix_suggestions_organization_id_status_created_at");
+
+                    b.ToTable("suggestions", "feedback");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Suggestions.Domain.SuggestionComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<Guid>("SuggestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suggestion_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_suggestion_comments");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_suggestion_comments_author_user_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_suggestion_comments_organization_id");
+
+                    b.HasIndex("SuggestionId", "CreatedAt")
+                        .HasDatabaseName("ix_suggestion_comments_suggestion_id_created_at");
+
+                    b.ToTable("suggestion_comments", "feedback");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Tasks.Domain.TaskItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssigneeUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_user_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CompletedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("CreatedByKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("created_by_kind");
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tasks");
+
+                    b.HasIndex("AssigneeUserId")
+                        .HasDatabaseName("ix_tasks_assignee_user_id");
+
+                    b.HasIndex("LeadId")
+                        .HasDatabaseName("ix_tasks_lead_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_tasks_organization_id");
+
+                    b.HasIndex("OrganizationId", "LeadId", "Status")
+                        .HasDatabaseName("ix_tasks_organization_id_lead_id_status");
+
+                    b.HasIndex("OrganizationId", "AssigneeUserId", "Status", "DueAt")
+                        .HasDatabaseName("ix_tasks_organization_id_assignee_user_id_status_due_at");
+
+                    b.ToTable("tasks", "tasks");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.BusinessCalendar.Domain.CalendarSettings", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_settings_organizations_organization_id");
+                });
+
             modelBuilder.Entity("Loteadora.Crm.Modules.Crm.Domain.Lead", b =>
                 {
                     b.HasOne("Loteadora.Crm.Modules.Crm.Domain.Contact", null)
@@ -848,6 +1660,23 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_lead_stage_transitions_leads_lead_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Iam.Domain.AccessLink", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_access_links_users_created_by_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("GuestUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_access_links_users_guest_user_id");
                 });
 
             modelBuilder.Entity("Loteadora.Crm.Modules.Iam.Domain.Membership", b =>
@@ -939,6 +1768,15 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .HasConstraintName("fk_teams_organizations_organization_id");
                 });
 
+            modelBuilder.Entity("Loteadora.Crm.Modules.Macros.Domain.Macro", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_macros_users_owner_user_id");
+                });
+
             modelBuilder.Entity("Loteadora.Crm.Modules.Pipeline.Domain.PipelineStage", b =>
                 {
                     b.HasOne("Loteadora.Crm.Modules.Pipeline.Domain.SalesPipeline", null)
@@ -957,6 +1795,85 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_pipelines_organizations_organization_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.Absence", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_absences_users_user_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.AgentSchedule", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_agent_schedules_users_user_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Scheduling.Domain.Appointment", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AgentUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_appointments_users_agent_user_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Crm.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_appointments_leads_lead_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Suggestions.Domain.ChangeSuggestion", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_suggestions_users_author_user_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Suggestions.Domain.SuggestionComment", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_suggestion_comments_users_author_user_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Suggestions.Domain.ChangeSuggestion", null)
+                        .WithMany()
+                        .HasForeignKey("SuggestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_suggestion_comments_suggestions_suggestion_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Tasks.Domain.TaskItem", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tasks_users_assignee_user_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Crm.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tasks_leads_lead_id");
                 });
 
             modelBuilder.Entity("Loteadora.Crm.Modules.Pipeline.Domain.SalesPipeline", b =>

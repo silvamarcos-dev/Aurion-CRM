@@ -16,7 +16,7 @@ namespace Loteadora.Crm.Modules.Crm.Application;
 ///  - audita na mesma transação.
 /// O mesmo serviço será usado pelo Copilot (via Tool Gateway), sob as mesmas regras.
 /// </summary>
-public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrail audit, TimeProvider clock)
+public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrail audit, PiiMask mask, TimeProvider clock)
 {
     private const int BoardStageLimit = 100;
 
@@ -32,9 +32,12 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = $"%{query.Search.Trim()}%";
-            var contactIds = db.Contacts
-                .Where(c => EF.Functions.ILike(c.FullName, term) || (c.Email != null && EF.Functions.ILike(c.Email, term)) || (c.PhoneE164 != null && EF.Functions.ILike(c.PhoneE164, term)))
-                .Select(c => c.Id);
+            // Sem pii.view a busca é só por nome: buscar por telefone/e-mail permitiria descobrir dados mascarados.
+            var contactIds = mask.IsMasking
+                ? db.Contacts.Where(c => EF.Functions.ILike(c.FullName, term)).Select(c => c.Id)
+                : db.Contacts
+                    .Where(c => EF.Functions.ILike(c.FullName, term) || (c.Email != null && EF.Functions.ILike(c.Email, term)) || (c.PhoneE164 != null && EF.Functions.ILike(c.PhoneE164, term)))
+                    .Select(c => c.Id);
             leads = leads.Where(l => contactIds.Contains(l.ContactId));
         }
 
@@ -42,7 +45,7 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
         var page = Math.Max(1, query.Page);
         var total = await leads.CountAsync(ct);
         var items = await ProjectCards(leads.OrderByDescending(l => l.EnteredAt).Skip((page - 1) * pageSize).Take(pageSize)).ToListAsync(ct);
-        return new PagedResult<LeadCardDto>(items, page, pageSize, total);
+        return new PagedResult<LeadCardDto>(items.Select(MaskCard).ToList(), page, pageSize, total);
     }
 
     public async Task<LeadDetailDto> GetAsync(Guid id, CancellationToken ct)
@@ -64,9 +67,11 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
             .FirstOrDefaultAsync(ct) ?? throw new NotFoundException("Lead");
 
         // Registro de acesso a dado pessoal (LGPD — auditoria de acesso).
-        audit.Record(AuditActions.LeadViewed, "lead", id);
+        audit.Record(AuditActions.LeadViewed, "lead", id, new { masked = mask.IsMasking });
         await db.SaveChangesAsync(ct);
-        return detail;
+        return mask.IsMasking
+            ? detail with { FullName = mask.Name(detail.FullName), Phone = mask.Phone(detail.Phone), Email = mask.Email(detail.Email), Notes = mask.FreeText(detail.Notes), LostReason = mask.FreeText(detail.LostReason) }
+            : detail;
     }
 
     public async Task<Guid> CreateAsync(CreateLeadCommand cmd, CancellationToken ct)
@@ -94,7 +99,7 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
         }
 
         var lead = new Lead(actor.OrganizationId, contact.Id, ownerId, stage, cmd.Source, cmd.Campaign, now);
-        lead.UpdateDetails(cmd.Interest, null, null, null, null, PurchaseTimeframe.Unknown, null, null, null, null);
+        lead.UpdateDetails(cmd.Interest, null, null, null, null, PurchaseTimeframe.Unknown, null, null, null);
         db.Leads.Add(lead);
 
         audit.Record(AuditActions.LeadCreated, "lead", lead.Id, new { ownerUserId = ownerId, stageId = stage.Id, cmd.Source, cmd.Campaign, contactReused = db.Entry(contact).State != EntityState.Added });
@@ -110,7 +115,7 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
 
         contact.Update(cmd.FullName, cmd.Phone, cmd.Email);
         lead.UpdateDetails(cmd.Interest, cmd.DevelopmentId, cmd.LotId, cmd.BudgetMinCents, cmd.BudgetMaxCents,
-            cmd.Timeframe, cmd.Region, cmd.Notes, cmd.Tags, cmd.NextFollowUpAt);
+            cmd.Timeframe, cmd.Region, cmd.Notes, cmd.Tags);
 
         // Auditoria registra QUAIS campos mudaram — sem valores de dados pessoais.
         var changed = db.Entry(lead).Properties.Where(p => p.IsModified).Select(p => p.Metadata.Name)
@@ -171,7 +176,7 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
         foreach (var stage in stages)
         {
             var cards = await ProjectCards(scoped.Where(l => l.StageId == stage.Id).OrderByDescending(l => l.StageEnteredAt).Take(BoardStageLimit)).ToListAsync(ct);
-            result.Add(new BoardStageDto(stage.Id, stage.Name, stage.Kind.ToString(), stage.Color, stage.Position, totals.GetValueOrDefault(stage.Id), cards));
+            result.Add(new BoardStageDto(stage.Id, stage.Name, stage.Kind.ToString(), stage.Color, stage.Position, totals.GetValueOrDefault(stage.Id), cards.Select(MaskCard).ToList()));
         }
 
         return new BoardDto(pipeline.Id, pipeline.Name, result);
@@ -183,36 +188,27 @@ public sealed class LeadService(AppDbContext db, ICurrentActor actor, IAuditTrai
         if (!await Scoped(scope).AnyAsync(l => l.Id == id, ct))
             throw new NotFoundException("Lead");
 
-        return await (
+        var items = await (
                 from a in db.AuditEvents
                 where a.EntityType == "lead" && a.EntityId == id && a.Action != AuditActions.LeadViewed
-                join u in db.Users on a.ActorId equals u.Id into users
+                join u in db.Users on a.ActorId equals (Guid?)u.Id into users
                 from u in users.DefaultIfEmpty()
                 orderby a.Sequence descending
                 select new LeadHistoryItemDto(a.OccurredAt, a.Action, a.ActorKind.ToString(), a.ActorId, u != null ? u.DisplayName : null, a.Data))
             .Take(200)
             .AsNoTracking()
             .ToListAsync(ct);
+
+        // Motivos e observações são texto livre (podem conter dados pessoais): removidos para quem não tem pii.view.
+        return mask.IsMasking ? items.Select(h => h with { Data = mask.AuditData(h.Data) }).ToList() : items;
     }
+
+    private LeadCardDto MaskCard(LeadCardDto card) =>
+        mask.IsMasking ? card with { ContactName = mask.Name(card.ContactName), Phone = mask.Phone(card.Phone) } : card;
 
     // ───────────────────────── helpers ─────────────────────────
 
-    /// <summary>Aplica o escopo da capability na consulta (o filtro de tenant já é global).</summary>
-    private IQueryable<Lead> Scoped(CapabilityScope scope)
-    {
-        var leads = db.Leads.AsQueryable();
-        switch (scope)
-        {
-            case CapabilityScope.Org:
-                return leads;
-            case CapabilityScope.Team when actor.TeamId is { } teamId:
-                var teamUserIds = db.Memberships.Where(m => m.TeamId == teamId).Select(m => m.UserId);
-                return leads.Where(l => teamUserIds.Contains(l.OwnerUserId));
-            default:
-                var userId = actor.UserId;
-                return leads.Where(l => l.OwnerUserId == userId);
-        }
-    }
+    private IQueryable<Lead> Scoped(CapabilityScope scope) => LeadScope.Apply(db, actor, scope);
 
     private async Task<Lead> LoadTrackedAsync(Guid id, CapabilityScope scope, uint expectedVersion, CancellationToken ct)
     {

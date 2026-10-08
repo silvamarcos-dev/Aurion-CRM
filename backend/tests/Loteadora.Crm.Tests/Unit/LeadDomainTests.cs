@@ -64,7 +64,7 @@ public sealed class LeadDomainTests
     {
         var (_, lead) = NewLead();
         Assert.Throws<DomainException>(() =>
-            lead.UpdateDetails(null, null, null, 200_000_00, 100_000_00, PurchaseTimeframe.Unknown, null, null, null, null));
+            lead.UpdateDetails(null, null, null, 200_000_00, 100_000_00, PurchaseTimeframe.Unknown, null, null, null));
     }
 
     [Theory]

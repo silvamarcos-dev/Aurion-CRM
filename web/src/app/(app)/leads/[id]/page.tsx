@@ -3,10 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, Briefcase, CalendarDays, CalendarPlus, CircleCheckBig, History, Mail, Phone, Plus, UserRound } from "lucide-react";
+import { AppointmentDialog, kindLabels } from "@/components/appointment-dialog";
+import { Avatar } from "@/components/ui/avatar";
+import { StageBadge } from "@/components/ui/stage-badge";
 import { useCan, useToast } from "@/components/providers";
+import { TaskDialog } from "@/components/task-dialog";
+import { TaskRow } from "@/components/task-row";
+import { formatDayLabel, zonedDate, zonedTime } from "@/lib/time";
 import { api, ApiError } from "@/lib/api";
 import { actionLabels, formatCents, formatDateTime, formatPhone, statusLabels, timeframeLabels } from "@/lib/format";
-import type { HistoryItem, LeadDetail, Pipeline, UserSummary } from "@/lib/types";
+import type { Appointment, HistoryItem, LeadDetail, Pipeline, TaskItem, UserSummary } from "@/lib/types";
 
 type FormState = {
   fullName: string;
@@ -19,7 +26,6 @@ type FormState = {
   region: string;
   notes: string;
   tags: string;
-  nextFollowUpAt: string;
 };
 
 function toForm(lead: LeadDetail): FormState {
@@ -34,14 +40,7 @@ function toForm(lead: LeadDetail): FormState {
     region: lead.region ?? "",
     notes: lead.notes ?? "",
     tags: lead.tags.join(", "),
-    nextFollowUpAt: lead.nextFollowUpAt ? toLocalInput(lead.nextFollowUpAt) : "",
   };
-}
-
-function toLocalInput(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 const toCents = (v: string) => (v.trim() === "" ? null : Math.round(Number(v.replace(",", ".")) * 100));
@@ -91,7 +90,6 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
         region: f.region || null,
         notes: f.notes || null,
         tags: f.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        nextFollowUpAt: f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toISOString() : null,
         expectedVersion: lead?.version,
       }),
     onSuccess: () => { toast("Alterações salvas.", "success"); refresh(); },
@@ -110,8 +108,8 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
     onError,
   });
 
-  if (error) return <div className="p-6 text-sm text-red-600">Lead não encontrado ou sem permissão de acesso.</div>;
-  if (!lead || !form) return <div className="p-6 text-sm text-slate-500">Carregando…</div>;
+  if (error) return <div className="p-8 text-sm text-red-600">Lead não encontrado ou sem permissão de acesso.</div>;
+  if (!lead || !form) return <div className="p-8"><div className="h-28 animate-pulse rounded-xl bg-white" /></div>;
 
   const stages = pipelines?.find((p) => p.id === lead.pipelineId)?.stages.filter((s) => !s.isArchived) ?? [];
   const target = stages.find((s) => s.id === targetStage);
@@ -124,27 +122,37 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
-      <Link href="/kanban" className="text-xs text-slate-500 hover:underline">← Voltar ao Kanban</Link>
-
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{lead.fullName}</h1>
-          <p className="text-sm text-slate-500">
-            {formatPhone(lead.phone)} · {lead.email ?? "sem e-mail"} · entrou em {formatDateTime(lead.enteredAt)}
-          </p>
+    <div>
+      <header className="border-b border-slate-200/80 bg-white">
+        <div className="mx-auto max-w-6xl px-4 pb-5 pt-4 sm:px-6 lg:px-8">
+          <Link href="/kanban" className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-brand-700">
+            <ArrowLeft className="size-3.5" /> Funil
+          </Link>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <Avatar name={lead.fullName} size="lg" />
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-semibold text-slate-900">{lead.fullName}</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                  <span className="flex items-center gap-1.5"><Phone className="size-3.5" />{formatPhone(lead.phone)}</span>
+                  <span className="flex items-center gap-1.5"><Mail className="size-3.5" />{lead.email ?? "sem e-mail"}</span>
+                  <span className="flex items-center gap-1.5"><CalendarPlus className="size-3.5" />entrou em {formatDateTime(lead.enteredAt)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <StageBadge stage={stages.find((st) => st.id === lead.stageId)} name={lead.stageName} />
+              <span className={`chip ring-1 ring-inset ${lead.status === "Won" ? "bg-brand-50 text-brand-800 ring-brand-200" : lead.status === "Lost" ? "bg-red-50 text-red-700 ring-red-200" : "bg-sky-50 text-sky-800 ring-sky-200"}`}>
+                {statusLabels[lead.status]}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">{lead.stageName}</span>
-          <span className={`rounded-full px-2.5 py-1 font-medium ${lead.status === "Won" ? "bg-emerald-100 text-emerald-800" : lead.status === "Lost" ? "bg-red-100 text-red-700" : "bg-sky-100 text-sky-800"}`}>
-            {statusLabels[lead.status]}
-          </span>
-        </div>
-      </div>
+      </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-3 lg:px-8">
         <form onSubmit={submit} className="card space-y-4 p-5 lg:col-span-2">
-          <h2 className="text-sm font-semibold">Dados do lead</h2>
+          <h2 className="section-title flex items-center gap-2"><UserRound className="size-4 text-slate-400" /> Dados do lead</h2>
           <fieldset disabled={!editable} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label" htmlFor="f-name">Nome</label>
@@ -180,11 +188,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
               <label className="label" htmlFor="f-region">Região</label>
               <input id="f-region" className="input" maxLength={120} value={form.region} onChange={set("region")} />
             </div>
-            <div>
-              <label className="label" htmlFor="f-follow">Próximo follow-up</label>
-              <input id="f-follow" type="datetime-local" className="input" value={form.nextFollowUpAt} onChange={set("nextFollowUpAt")} />
-            </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="label" htmlFor="f-tags">Tags (separadas por vírgula)</label>
               <input id="f-tags" className="input" value={form.tags} onChange={set("tags")} />
             </div>
@@ -201,14 +205,21 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
           )}
         </form>
 
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-2 lg:row-start-2">
+          <LeadTasks leadId={lead.id} leadName={lead.fullName} />
+          <LeadAppointments leadId={lead.id} leadName={lead.fullName} />
+        </div>
+
+        <div className="space-y-6 lg:col-start-3 lg:row-span-2 lg:row-start-1">
           <section className="card space-y-3 p-5">
-            <h2 className="text-sm font-semibold">Comercial</h2>
+            <h2 className="section-title flex items-center gap-2"><Briefcase className="size-4 text-slate-400" /> Comercial</h2>
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
               <dt className="text-slate-500">Origem</dt><dd>{lead.source ?? "—"}</dd>
               <dt className="text-slate-500">Campanha</dt><dd>{lead.campaign ?? "—"}</dd>
-              <dt className="text-slate-500">Faixa</dt><dd>{formatCents(lead.budgetMinCents)} – {formatCents(lead.budgetMaxCents)}</dd>
+              <dt className="text-slate-500">Faixa</dt><dd>{lead.budgetMinCents == null && lead.budgetMaxCents == null ? "Não informada" : `${formatCents(lead.budgetMinCents)} – ${formatCents(lead.budgetMaxCents)}`}</dd>
               <dt className="text-slate-500">Último contato</dt><dd>{formatDateTime(lead.lastContactAt)}</dd>
+              <dt className="text-slate-500">Próximo follow-up</dt>
+              <dd className={lead.nextFollowUpAt && new Date(lead.nextFollowUpAt) < new Date() ? "font-medium text-red-600" : ""}>{formatDateTime(lead.nextFollowUpAt)}</dd>
               {lead.lostReason && (<><dt className="text-slate-500">Motivo da perda</dt><dd>{lead.lostReason}</dd></>)}
             </dl>
 
@@ -240,11 +251,11 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
           </section>
 
           <section className="card p-5">
-            <h2 className="mb-3 text-sm font-semibold">Histórico</h2>
+            <h2 className="section-title mb-4 flex items-center gap-2"><History className="size-4 text-slate-400" /> Histórico</h2>
             <ol className="space-y-3 border-l border-slate-200 pl-4">
               {history?.map((h, i) => (
                 <li key={i} className="relative text-sm">
-                  <span className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-slate-300" aria-hidden />
+                  <span className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-brand-400 ring-4 ring-white" aria-hidden />
                   <p className="font-medium">{actionLabels[h.action] ?? h.action}</p>
                   <p className="text-xs text-slate-500">
                     {formatDateTime(h.occurredAt)} · {h.actorKind === "User" ? (h.actorName ?? "Usuário") : h.actorKind === "Copilot" ? "Copilot" : "Sistema"}
@@ -282,4 +293,56 @@ function HistoryDetail({ item, stages }: { item: HistoryItem; stages: { id: stri
     return <p className="text-xs text-slate-600">Campos: {(data.fields as string[]).join(", ")}</p>;
   }
   return null;
+}
+
+function LeadTasks({ leadId, leadName }: { leadId: string; leadName: string }) {
+  const can = useCan();
+  const [open, setOpen] = useState(false);
+  const { data: tasks } = useQuery({ queryKey: ["lead-tasks", leadId], queryFn: () => api.get<TaskItem[]>(`tasks?leadId=${leadId}&limit=50`) });
+  const openTasks = tasks?.filter((t) => t.status === "Open") ?? [];
+  const closed = tasks?.filter((t) => t.status !== "Open").slice(0, 5) ?? [];
+
+  return (
+    <section className="card p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="section-title flex items-center gap-2"><CircleCheckBig className="size-4 text-slate-400" /> Tarefas e follow-ups</h2>
+        {can("tasks.manage") && <button className="btn-secondary" onClick={() => setOpen(true)}><Plus className="size-4" /> Tarefa</button>}
+      </div>
+      <ul className="space-y-2">
+        {openTasks.map((t) => <TaskRow key={t.id} task={t} hideLead />)}
+        {closed.map((t) => <TaskRow key={t.id} task={t} hideLead />)}
+        {tasks?.length === 0 && <li className="text-sm text-slate-500">Nenhuma tarefa. Crie um follow-up para não perder o timing.</li>}
+      </ul>
+      <TaskDialog open={open} onClose={() => setOpen(false)} lead={{ id: leadId, name: leadName }} />
+    </section>
+  );
+}
+
+const appointmentStatusText: Record<string, string> = { Scheduled: "Agendado", Completed: "Realizado", Cancelled: "Cancelado", NoShow: "Não compareceu" };
+
+function LeadAppointments({ leadId, leadName }: { leadId: string; leadName: string }) {
+  const can = useCan();
+  const [open, setOpen] = useState(false);
+  const { data: appointments } = useQuery({ queryKey: ["lead-appointments", leadId], queryFn: () => api.get<Appointment[]>(`leads/${leadId}/appointments`) });
+
+  return (
+    <section className="card p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="section-title flex items-center gap-2"><CalendarDays className="size-4 text-slate-400" /> Visitas e compromissos</h2>
+        {can("calendar.manage") && <button className="btn-secondary" onClick={() => setOpen(true)}><Plus className="size-4" /> Agendar visita</button>}
+      </div>
+      <ul className="space-y-2">
+        {appointments?.map((a) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2.5 text-sm">
+            <span className="font-medium">{formatDayLabel(zonedDate(a.startsAt))} {zonedTime(a.startsAt)}</span>
+            <span className="text-slate-600">{kindLabels[a.kind]} com {a.agentName}</span>
+            {a.location && <span className="text-xs text-slate-500">· {a.location}</span>}
+            <span className={`ml-auto rounded px-1.5 text-xs ${a.status === "Scheduled" ? "bg-brand-100 text-brand-800" : "bg-slate-200 text-slate-600"}`}>{appointmentStatusText[a.status]}</span>
+          </li>
+        ))}
+        {appointments?.length === 0 && <li className="text-sm text-slate-500">Nenhuma visita agendada.</li>}
+      </ul>
+      <AppointmentDialog open={open} onClose={() => setOpen(false)} lead={{ id: leadId, name: leadName }} />
+    </section>
+  );
 }

@@ -1,4 +1,10 @@
 using Loteadora.Crm.Modules.Audit;
+using Loteadora.Crm.Modules.BusinessCalendar.Application;
+using Loteadora.Crm.Modules.DevTools;
+using Loteadora.Crm.Modules.Macros.Application;
+using Loteadora.Crm.Modules.Suggestions.Application;
+using Loteadora.Crm.Modules.Scheduling.Application;
+using Loteadora.Crm.Modules.Tasks.Application;
 using Loteadora.Crm.Modules.Crm.Application;
 using Loteadora.Crm.Modules.Iam.Application;
 using Loteadora.Crm.Modules.Iam.Domain;
@@ -40,8 +46,24 @@ public static class ModulesRegistration
         services.AddSingleton<ICorrelationIdAccessor, ActivityCorrelationIdAccessor>();
         services.AddScoped<IAuditTrail, AuditTrail>();
 
+        services.AddScoped<AccessLinkService>();
+        services.AddScoped<PiiMask>();
+        services.AddScoped<MemberScope>();
+        services.AddScoped<LeadAccess>();
         services.AddScoped<LeadService>();
         services.AddScoped<PipelineService>();
+
+        services.AddScoped<BusinessCalendarService>();
+        services.AddHttpClient<IHolidayProvider, BrasilApiHolidayProvider>(c =>
+        {
+            c.BaseAddress = new Uri(configuration["Integrations:BrasilApi:BaseUrl"] ?? "https://brasilapi.com.br/");
+            c.Timeout = TimeSpan.FromSeconds(15);
+        });
+        services.AddScoped<SchedulingService>();
+        services.AddScoped<TaskService>();
+        services.AddScoped<MacroService>();
+        services.AddScoped<SuggestionService>();
+        services.AddScoped<DevToolsService>();
 
         if (runOutboxDispatcher)
             services.AddHostedService<OutboxDispatcher>();

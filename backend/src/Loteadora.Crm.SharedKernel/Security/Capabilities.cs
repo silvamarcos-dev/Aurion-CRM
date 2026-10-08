@@ -29,6 +29,25 @@ public static class Capabilities
 
     public const string AuditRead = "audit.read";
 
+    public const string CalendarRead = "calendar.read";
+    public const string CalendarManage = "calendar.manage";
+
+    public const string TasksRead = "tasks.read";
+    public const string TasksManage = "tasks.manage";
+
+    public const string MacrosUse = "macros.use";
+    public const string MacrosManage = "macros.manage";
+
+    /// <summary>Ver dados pessoais completos (telefone, e-mail, nome completo). Sem ela, a API devolve dados mascarados.</summary>
+    public const string PiiView = "pii.view";
+
+    /// <summary>Painel do desenvolvedor (ambiente, saúde, fila de eventos, endpoints). Somente leitura.</summary>
+    public const string DevTools = "dev.tools";
+
+    public const string SuggestionsCreate = "suggestions.create";
+    public const string SuggestionsRead = "suggestions.read";
+    public const string SuggestionsManage = "suggestions.manage";
+
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string SettingsManage = "settings.manage";
@@ -38,6 +57,11 @@ public static class Capabilities
         LeadsRead, LeadsCreate, LeadsUpdate, LeadsAssign, LeadsDelete, LeadsExport,
         PipelineMove, PipelineConfigure,
         AuditRead,
+        CalendarRead, CalendarManage,
+        TasksRead, TasksManage,
+        MacrosUse, MacrosManage,
+        PiiView, DevTools,
+        SuggestionsCreate, SuggestionsRead, SuggestionsManage,
         UsersManage, RolesManage, SettingsManage,
     };
 }

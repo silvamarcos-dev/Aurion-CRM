@@ -49,6 +49,7 @@ public sealed record LoginResult(bool Succeeded, TokenPair? Tokens, string? Erro
 
 public sealed class AuthService(
     AppDbContext db,
+    ActorLoader actorLoader,
     IPasswordHasher<User> hasher,
     IOptions<AuthOptions> options,
     TimeProvider clock,
@@ -70,7 +71,7 @@ public sealed class AuthService(
             return LoginResult.Fail(InvalidCredentials);
         }
 
-        if (!user.IsActive || user.IsLockedOut(now))
+        if (!user.IsActive || user.IsGuest || user.IsLockedOut(now))
             return LoginResult.Fail(InvalidCredentials);
 
         var verification = hasher.VerifyHashedPassword(user, user.PasswordHash, password);
@@ -88,7 +89,7 @@ public sealed class AuthService(
         var memberships = await (
                 from m in db.Memberships.IgnoreQueryFilters()
                 join o in db.Organizations on m.OrganizationId equals o.Id
-                where m.UserId == user.Id && m.Status == MembershipStatus.Active && o.IsActive
+                where m.UserId == user.Id && m.Status == MembershipStatus.Active && (m.ExpiresAt == null || m.ExpiresAt > now) && o.IsActive
                 select new { m.OrganizationId, o.Slug })
             .ToListAsync(ct);
 
@@ -127,7 +128,7 @@ public sealed class AuthService(
             return LoginResult.Fail("Sessão expirada.");
         }
 
-        var actorStillValid = await new ActorLoader(db).LoadAsync(stored.UserId, stored.OrganizationId, ct);
+        var actorStillValid = await actorLoader.LoadAsync(stored.UserId, stored.OrganizationId, ct);
         if (actorStillValid is null)
         {
             await RevokeFamilyAsync(stored.FamilyId, now, ct);
@@ -162,6 +163,10 @@ public sealed class AuthService(
 
     private TokenPair IssueTokens(Guid userId, Guid organizationId, Guid familyId, DateTimeOffset now) =>
         IssueTokens(userId, organizationId, familyId, now, out _);
+
+    /// <summary>Emite uma nova sessão para um usuário já validado por outro fator (ex.: link de acesso). Não salva.</summary>
+    internal TokenPair IssueSession(Guid userId, Guid organizationId, DateTimeOffset now) =>
+        IssueTokens(userId, organizationId, Guid.CreateVersion7(), now);
 
     private TokenPair IssueTokens(Guid userId, Guid organizationId, Guid familyId, DateTimeOffset now, out RefreshToken refreshEntity)
     {

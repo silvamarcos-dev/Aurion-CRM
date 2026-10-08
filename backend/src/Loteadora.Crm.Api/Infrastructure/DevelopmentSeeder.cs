@@ -1,4 +1,10 @@
+using Loteadora.Crm.Modules.BusinessCalendar.Domain;
 using Loteadora.Crm.Modules.Crm.Application;
+using Loteadora.Crm.Modules.Macros.Application;
+using Loteadora.Crm.Modules.Scheduling.Application;
+using Loteadora.Crm.Modules.Scheduling.Domain;
+using Loteadora.Crm.Modules.Tasks.Application;
+using Loteadora.Crm.Modules.Tasks.Domain;
 using Loteadora.Crm.Modules.Iam.Application;
 using Loteadora.Crm.Modules.Persistence;
 using Loteadora.Crm.SharedKernel.Security;
@@ -15,7 +21,10 @@ public sealed class DevelopmentSeeder(AppDbContext db, OrganizationProvisioning 
     public async Task SeedAsync(string password, CancellationToken ct)
     {
         if (await db.Organizations.AnyAsync(ct))
+        {
+            await SeedRoutineForExistingDemoAsync(ct);
             return;
+        }
 
         var demo = await provisioning.ProvisionAsync("Loteadora Demo", "demo",
         [
@@ -49,13 +58,88 @@ public sealed class DevelopmentSeeder(AppDbContext db, OrganizationProvisioning 
             ("Lucas Martins", "11987650007", "Site", "Proposta parcelada", carla, 5),
         };
 
+        var leadIds = new Dictionary<string, Guid>();
         foreach (var s in samples)
-        {
-            var id = await leads.CreateAsync(new CreateLeadCommand(s.Name, s.Phone, null, s.Source, "Lançamento 2026", s.Interest, demo.StageIds[s.Stage], s.Owner), ct);
-            _ = id;
-        }
+            leadIds[s.Name] = await leads.CreateAsync(new CreateLeadCommand(s.Name, s.Phone, null, s.Source, "Lançamento 2026", s.Interest, demo.StageIds[s.Stage], s.Owner), ct);
+
+        await SeedRoutineAsync(scope.ServiceProvider, demo, leadIds, ct);
 
         logger.LogInformation("Dados de desenvolvimento criados (organizações 'demo' e 'outra').");
+    }
+
+    private static readonly string[] RoutineLeadNames = ["Mariana Souza", "Paulo Lima", "Ricardo Gomes", "Beatriz Costa"];
+    private static readonly string[] RoutineUserEmails = ["gestor@demo.local", "corretor1@demo.local", "corretor2@demo.local"];
+
+    /// <summary>Bancos de desenvolvimento criados antes da Fase 2 recebem os dados de rotina uma única vez.</summary>
+    private async Task SeedRoutineForExistingDemoAsync(CancellationToken ct)
+    {
+        var demoOrg = await db.Organizations.FirstOrDefaultAsync(o => o.Slug == "demo", ct);
+        if (demoOrg is null || await db.AgentSchedules.IgnoreQueryFilters().AnyAsync(s => s.OrganizationId == demoOrg.Id, ct))
+            return;
+
+        await using var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<RequestContext>().InitializeSystem(demoOrg.Id,
+            Capabilities.All.ToDictionary(c => c, _ => CapabilityScope.Org));
+        var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var users = await (from m in scopedDb.Memberships
+                           join u in scopedDb.Users on m.UserId equals u.Id
+                           select new { u.Email, u.Id }).ToDictionaryAsync(x => x.Email, x => x.Id, ct);
+        var leads = await (from l in scopedDb.Leads
+                           join c in scopedDb.Contacts on l.ContactId equals c.Id
+                           select new { c.FullName, l.Id }).ToListAsync(ct);
+        var leadIds = leads.GroupBy(l => l.FullName).ToDictionary(g => g.Key, g => g.First().Id);
+
+        var demo = new ProvisionedOrganization(demoOrg.Id, users, Guid.Empty, []);
+        if (RoutineLeadNames.All(leadIds.ContainsKey) && RoutineUserEmails.All(users.ContainsKey))
+        {
+            await SeedRoutineAsync(scope.ServiceProvider, demo, leadIds, ct);
+            logger.LogInformation("Dados de rotina (Fase 2) adicionados à organização 'demo'.");
+        }
+    }
+
+    /// <summary>Fase 2: jornadas, macros, tarefas e uma visita de exemplo.</summary>
+    private static async Task SeedRoutineAsync(IServiceProvider sp, ProvisionedOrganization demo, Dictionary<string, Guid> leadIds, CancellationToken ct)
+    {
+        var scheduling = sp.GetRequiredService<SchedulingService>();
+        var tasks = sp.GetRequiredService<TaskService>();
+        var macros = sp.GetRequiredService<MacroService>();
+        var clock = sp.GetRequiredService<TimeProvider>();
+
+        var weekdays = Enumerable.Range(1, 5).SelectMany(d => new[]
+        {
+            new WeeklyInterval(d, new TimeOnly(8, 0), new TimeOnly(12, 0)),
+            new WeeklyInterval(d, new TimeOnly(13, 0), new TimeOnly(18, 0)),
+        });
+        var withSaturday = weekdays.Append(new WeeklyInterval(6, new TimeOnly(8, 0), new TimeOnly(12, 0))).ToList();
+
+        foreach (var email in new[] { "gestor@demo.local", "corretor1@demo.local", "corretor2@demo.local" })
+            await scheduling.UpdateScheduleAsync(demo.UserIdsByEmail[email], new UpdateAgentScheduleCommand(withSaturday, 60, 30, 120, 6, false), ct);
+
+        var shared = new (string Shortcut, string Title, string Body)[]
+        {
+            ("/apresentacao", "Apresentação", "Olá, {{lead.first_name}}! Meu nome é {{agent.name}}, da {{org.name}}. Vi seu interesse e vou te ajudar. Posso te explicar como funciona?"),
+            ("/localizacao", "Localização", "{{lead.first_name}}, o empreendimento fica em uma região de fácil acesso. Quer que eu envie a localização no mapa?"),
+            ("/documentacao", "Documentação", "Para avançarmos, vou precisar de: RG, CPF, comprovante de residência e comprovante de renda. Pode me enviar por aqui mesmo."),
+            ("/agendar", "Agendar visita", "{{lead.first_name}}, que tal conhecer o local pessoalmente? Vou verificar os horários disponíveis e te confirmo."),
+            ("/followup", "Follow-up", "Oi, {{lead.first_name}}! Passando para saber se ficou alguma dúvida. Estou à disposição."),
+        };
+        foreach (var m in shared)
+            await macros.CreateAsync(new SaveMacroCommand(m.Shortcut, m.Title, m.Body, Shared: true, DevelopmentId: null), ct);
+
+        var now = clock.GetUtcNow();
+        await tasks.CreateAsync(new CreateTaskCommand(null, leadIds["Mariana Souza"], TaskKind.FollowUp, "Retornar sobre condições de pagamento", null, now.AddHours(-20)), ct);
+        await tasks.CreateAsync(new CreateTaskCommand(null, leadIds["Paulo Lima"], TaskKind.Call, "Ligar para entender prazo de compra", null, now.AddHours(2)), ct);
+        await tasks.CreateAsync(new CreateTaskCommand(null, leadIds["Ricardo Gomes"], TaskKind.FollowUp, "Enviar tabela atualizada", null, now.AddDays(2)), ct);
+
+        // Primeira janela livre REAL do corretor (nunca um horário inventado).
+        var today = DateOnly.FromDateTime(now.UtcDateTime);
+        var availability = await scheduling.GetAvailabilityAsync(demo.UserIdsByEmail["corretor1@demo.local"], today.AddDays(1), today.AddDays(8), null, ct);
+        if (availability.Slots.Count > 0 && availability.Slots[0] is { } slot)
+        {
+            await scheduling.CreateAppointmentAsync(new CreateAppointmentCommand(null, leadIds["Beatriz Costa"], AppointmentKind.Visit, null, slot.Start, slot.End,
+                "Stand de vendas — Residencial Primavera", null, ConfirmWarnings: false), ct);
+        }
     }
 }
 

@@ -14,26 +14,59 @@ public static class SystemRoles
     public const string Manager = "Gestor";
     public const string Agent = "Corretor";
 
-    public static IReadOnlyList<Role> CreateFor(Guid organizationId)
+    /// <summary>Acesso externo somente leitura, com dados pessoais mascarados.</summary>
+    public const string Visitor = "Visitante";
+
+    /// <summary>Acesso externo para apoio técnico: leitura + painel do desenvolvedor + gestão de sugestões. Dados mascarados.</summary>
+    public const string Developer = "Desenvolvedor";
+
+    /// <summary>Papéis concedidos por link de acesso (usuários convidados, sem senha).</summary>
+    public static readonly IReadOnlySet<string> GuestRoles = new HashSet<string> { Visitor, Developer };
+
+    public static IReadOnlyDictionary<string, CapabilityScope> GrantsFor(string role) => role switch
     {
-        var admin = new Role(organizationId, Admin, isSystem: true);
-        foreach (var capability in All)
-            admin.Grant(capability, CapabilityScope.Org);
+        Admin => All.ToDictionary(c => c, _ => CapabilityScope.Org),
+        Manager => new Dictionary<string, CapabilityScope>
+        {
+            [LeadsRead] = CapabilityScope.Team, [LeadsCreate] = CapabilityScope.Team, [LeadsUpdate] = CapabilityScope.Team,
+            [LeadsAssign] = CapabilityScope.Team, [PipelineMove] = CapabilityScope.Team, [AuditRead] = CapabilityScope.Team,
+            [CalendarRead] = CapabilityScope.Team, [CalendarManage] = CapabilityScope.Team,
+            [TasksRead] = CapabilityScope.Team, [TasksManage] = CapabilityScope.Team,
+            [MacrosUse] = CapabilityScope.Org, [MacrosManage] = CapabilityScope.Org,
+            [PiiView] = CapabilityScope.Org,
+            [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+        },
+        Agent => new Dictionary<string, CapabilityScope>
+        {
+            [LeadsRead] = CapabilityScope.Own, [LeadsCreate] = CapabilityScope.Own, [LeadsUpdate] = CapabilityScope.Own,
+            [PipelineMove] = CapabilityScope.Own,
+            [CalendarRead] = CapabilityScope.Own, [CalendarManage] = CapabilityScope.Own,
+            [TasksRead] = CapabilityScope.Own, [TasksManage] = CapabilityScope.Own,
+            [MacrosUse] = CapabilityScope.Org, [MacrosManage] = CapabilityScope.Own,
+            [PiiView] = CapabilityScope.Org,
+            [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+        },
+        Visitor => new Dictionary<string, CapabilityScope>
+        {
+            [LeadsRead] = CapabilityScope.Org, [CalendarRead] = CapabilityScope.Org, [TasksRead] = CapabilityScope.Org,
+            [MacrosUse] = CapabilityScope.Org,
+            [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+        },
+        Developer => new Dictionary<string, CapabilityScope>
+        {
+            [LeadsRead] = CapabilityScope.Org, [CalendarRead] = CapabilityScope.Org, [TasksRead] = CapabilityScope.Org,
+            [MacrosUse] = CapabilityScope.Org, [AuditRead] = CapabilityScope.Org, [Capabilities.DevTools] = CapabilityScope.Org,
+            [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Org, [SuggestionsManage] = CapabilityScope.Org,
+        },
+        _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Papel de sistema desconhecido."),
+    };
 
-        var manager = new Role(organizationId, Manager, isSystem: true);
-        manager.Grant(LeadsRead, CapabilityScope.Team);
-        manager.Grant(LeadsCreate, CapabilityScope.Team);
-        manager.Grant(LeadsUpdate, CapabilityScope.Team);
-        manager.Grant(LeadsAssign, CapabilityScope.Team);
-        manager.Grant(PipelineMove, CapabilityScope.Team);
-        manager.Grant(AuditRead, CapabilityScope.Team);
-
-        var agent = new Role(organizationId, Agent, isSystem: true);
-        agent.Grant(LeadsRead, CapabilityScope.Own);
-        agent.Grant(LeadsCreate, CapabilityScope.Own);
-        agent.Grant(LeadsUpdate, CapabilityScope.Own);
-        agent.Grant(PipelineMove, CapabilityScope.Own);
-
-        return [admin, manager, agent];
-    }
+    public static IReadOnlyList<Role> CreateFor(Guid organizationId) =>
+        new[] { Admin, Manager, Agent, Visitor, Developer }.Select(name =>
+        {
+            var role = new Role(organizationId, name, isSystem: true);
+            foreach (var (capability, scope) in GrantsFor(name))
+                role.Grant(capability, scope);
+            return role;
+        }).ToList();
 }

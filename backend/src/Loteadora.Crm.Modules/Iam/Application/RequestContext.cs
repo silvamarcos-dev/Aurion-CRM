@@ -57,20 +57,22 @@ public sealed class RequestContext : ICurrentActor, ITenantContext
     }
 }
 
-public sealed class ActorLoader(AppDbContext db)
+public sealed class ActorLoader(AppDbContext db, TimeProvider clock)
 {
     public sealed record LoadedActor(Guid UserId, Guid OrganizationId, Guid? TeamId, IReadOnlyDictionary<string, CapabilityScope> Capabilities);
 
-    /// <summary>Carrega vínculo ativo + capabilities. Retorna null se usuário/vínculo/organização estiverem inativos.</summary>
+    /// <summary>Carrega vínculo ativo + capabilities. Retorna null se usuário/vínculo/organização estiverem inativos ou expirados.</summary>
     public async Task<LoadedActor?> LoadAsync(Guid userId, Guid organizationId, CancellationToken ct)
     {
+        var now = clock.GetUtcNow();
         var row = await (
                 from m in db.Memberships.IgnoreQueryFilters()
                 join u in db.Users on m.UserId equals u.Id
                 join o in db.Organizations on m.OrganizationId equals o.Id
                 join r in db.Roles.IgnoreQueryFilters() on m.RoleId equals r.Id
                 where m.UserId == userId && m.OrganizationId == organizationId
-                      && m.Status == MembershipStatus.Active && u.IsActive && o.IsActive
+                      && m.Status == MembershipStatus.Active && (m.ExpiresAt == null || m.ExpiresAt > now)
+                      && u.IsActive && o.IsActive
                       && r.OrganizationId == organizationId
                 select new { m.TeamId, r.Capabilities })
             .AsNoTracking()

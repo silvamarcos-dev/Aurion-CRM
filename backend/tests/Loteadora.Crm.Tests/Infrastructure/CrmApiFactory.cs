@@ -71,6 +71,8 @@ public sealed class CrmApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
             var hosted = services.Where(d => d.ImplementationType == typeof(Modules.Outbox.OutboxDispatcher)).ToList();
             foreach (var d in hosted)
                 services.Remove(d);
+
+            services.AddSingleton<Modules.BusinessCalendar.Application.IHolidayProvider, FakeHolidayProvider>();
         });
     }
 

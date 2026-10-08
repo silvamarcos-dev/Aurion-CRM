@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
@@ -31,21 +32,16 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <ToastContext.Provider value={push}>
         {children}
-        <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2" role="status" aria-live="polite">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`pointer-events-auto rounded-lg px-4 py-3 text-sm shadow-lg ring-1 ${
-                t.tone === "error"
-                  ? "bg-red-50 text-red-800 ring-red-200"
-                  : t.tone === "success"
-                    ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                    : "bg-white text-slate-800 ring-slate-200"
-              }`}
-            >
-              {t.message}
-            </div>
-          ))}
+        <div className="pointer-events-none fixed right-4 top-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2" role="status" aria-live="polite">
+          {toasts.map((t) => {
+            const Icon = t.tone === "error" ? CircleAlert : t.tone === "success" ? CircleCheck : Info;
+            return (
+              <div key={t.id} className="pointer-events-auto flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-pop">
+                <Icon className={`mt-0.5 size-4 shrink-0 ${t.tone === "error" ? "text-red-600" : t.tone === "success" ? "text-brand-600" : "text-sky-600"}`} />
+                <span>{t.message}</span>
+              </div>
+            );
+          })}
         </div>
       </ToastContext.Provider>
     </QueryClientProvider>

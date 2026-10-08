@@ -44,6 +44,13 @@ api.MapAuthEndpoints();
 api.MapDirectoryEndpoints();
 api.MapLeadEndpoints();
 api.MapPipelineEndpoints();
+api.MapCalendarEndpoints();
+api.MapSchedulingEndpoints();
+api.MapTaskEndpoints();
+api.MapMacroEndpoints();
+api.MapAccessLinkEndpoints();
+api.MapSuggestionEndpoints();
+api.MapDevToolsEndpoints();
 
 await app.RunAsync();
 

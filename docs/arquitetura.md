@@ -35,8 +35,9 @@ Navegador ──cookie httpOnly──► Next.js (UI + BFF) ──Bearer JWT─�
 | Pipeline (pipelines e etapas configuráveis) | `pipeline` | ✅ Fase 1 |
 | Auditoria | `audit` | ✅ Fase 1 |
 | Outbox / mensageria | `messaging` | ✅ Fase 1 |
-| Agenda + BusinessCalendarService | `scheduling`, `calendar` | ⏳ Fase 2 |
-| Tarefas / follow-ups, Macros | `tasks`, `macros` | ⏳ Fase 2 |
+| BusinessCalendarService (expediente, feriados, exceções, cobertura do Copilot) | `calendar` | ✅ Fase 2 |
+| Agenda (jornada, ausências, visitas, disponibilidade) | `scheduling` | ✅ Fase 2 |
+| Tarefas / follow-ups, Macros | `tasks`, `macros` | ✅ Fase 2 |
 | Inbox + WhatsApp (provider Meta) | `inbox`, `channels` | ⏳ Fase 3 |
 | Automações (trigger → condições → ações) | `automation` | ⏳ Fase 4 |
 | Call Manager | `telephony` | ⏳ Fase 5 |
@@ -56,6 +57,10 @@ Capabilities com escopo `Own < Team < Org` ficam em `SharedKernel/Security/Capab
 | pipeline.move | Org | Team | Own |
 | pipeline.configure | Org | — | — |
 | audit.read | Org | Team | — |
+| calendar.read / calendar.manage | Org | Team | Own |
+| tasks.read / tasks.manage | Org | Team | Own |
+| macros.use | Org | Org | Org |
+| macros.manage | Org (compartilhadas) | Org (compartilhadas) | Own (pessoais) |
 
 O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. Suas permissões efetivas são `capabilities(corretor) ∩ nível de autonomia ∩ política da organização`. Ele nunca altera as próprias permissões.
 
@@ -72,7 +77,28 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 
 - O lead usa `xmin` do PostgreSQL como versão. O cliente envia `expectedVersion` e a API responde 409 se o lead foi alterado por outra pessoa.
 - Planejado para o takeover do Copilot: *fencing token* (`ownership_epoch`) + `SELECT … FOR UPDATE` na conversa.
-- Planejado para visitas: `EXCLUDE USING gist (agent_id WITH =, during WITH &&)` para impedir sobreposição de horários.
+- Visitas: `EXCLUDE USING gist (organization_id =, agent_user_id =, tstzrange(starts_at, ends_at) &&) WHERE status = 'Scheduled'`. Dois compromissos agendados do mesmo corretor nunca se sobrepõem, nem com requisições simultâneas (coberto por teste com 6 reservas paralelas).
+
+## Calendário comercial (Fase 2)
+
+- **Toda regra de horário passa pelo `BusinessCalendar`**, uma classe pura com NodaTime e fuso da organização. Nenhum outro código compara horários diretamente.
+- **Precedência por data:** exceção (fechado ou expediente especial) > feriado confirmado > horário semanal. Os intervalos são semiabertos `[início, fim)`.
+- **Feriados:** os nacionais vêm da BrasilAPI (`IHolidayProvider`) e entram como **pendentes**. A API inclui pontos facultativos, como o Carnaval, então só valem depois da confirmação do administrador. Feriados estaduais e municipais são cadastrados manualmente, com UF e código IBGE configurados na organização. Apenas o ano é enviado ao provedor.
+- **Cobertura do Copilot:** `Coverage(instant)` diz se a janela permite atuação sem o corretor (fora do expediente, sábado, domingo, feriado — tudo configurável). Isso define a janela; o nível de autonomia é separado e começa no mínimo.
+
+## Disponibilidade real (Fase 2)
+
+`AvailabilityCalculator` (puro) = jornada do corretor − feriados (se ele não trabalha neles) − dias fechados − ausências − compromissos (com folga de deslocamento) − antecedência mínima − limite diário de visitas.
+
+- **Sem jornada cadastrada, não há disponibilidade.** O sistema nunca presume horário livre.
+- **Bloqueios** (sempre recusados): conflito, ausência, horário no passado.
+- **Avisos** (exigem confirmação explícita do humano, registrada na auditoria): fora da jornada, sem folga, antecedência, feriado, limite diário.
+- O Copilot (Fase 8) usará o mesmo cálculo via `calendar.get_availability` e **nunca** poderá confirmar sem autorização do corretor.
+
+## Tarefas e macros (Fase 2)
+
+- `Lead.NextFollowUpAt` é **derivado** da tarefa aberta mais próxima do lead e recalculado na mesma transação. Concluir um follow-up, ligação ou mensagem registra o último contato.
+- **Macros:** template com **lista branca** de variáveis (`{{lead.first_name}}`, `{{agent.name}}`…). Variável desconhecida é recusada ao salvar, e o valor é inserido literalmente, sem reavaliação. A renderização exige que o lead esteja no escopo do usuário, então uma macro não vaza dados. Nada é enviado; o envio entra na Fase 3.
 
 ## Roadmap
 
@@ -80,7 +106,7 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 |---|---|---|
 | **0 — Fundação** ✅ | Solution, auth, RBAC, tenancy, auditoria, outbox, testes de isolamento | Base segura |
 | **1 — CRM + Kanban** ✅ | Leads, contatos, pipeline configurável, Kanban, histórico | Uso interno sem IA |
-| 2 — Agenda e rotina | BusinessCalendarService (NodaTime, feriados), jornada do corretor, visitas, tarefas, macros | Agenda real |
+| **2 — Agenda e rotina** ✅ | BusinessCalendarService (NodaTime, feriados), jornada do corretor, visitas, tarefas, macros | Agenda real |
 | 3 — Atendimento humano | Inbox, provider WhatsApp (webhook HMAC, idempotência, janela de 24h, templates) | Conversas no CRM |
 | 4 — Automações | Motor de regras, gatilhos temporais em dias úteis, painel de execuções | Rotina automatizada |
 | 5 — Call Manager | Filas, campanhas, scripts, resultados configuráveis | Cold call |

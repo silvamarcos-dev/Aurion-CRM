@@ -95,8 +95,7 @@ public sealed class Lead : Entity, ITenantOwned, IHasTimestamps
         PurchaseTimeframe timeframe,
         string? region,
         string? notes,
-        IEnumerable<string>? tags,
-        DateTimeOffset? nextFollowUpAt)
+        IEnumerable<string>? tags)
     {
         if (budgetMinCents is < 0 || budgetMaxCents is < 0 ||
             (budgetMinCents is { } min && budgetMaxCents is { } max && min > max))
@@ -111,8 +110,10 @@ public sealed class Lead : Entity, ITenantOwned, IHasTimestamps
         Region = Guard.MaxLength(Trim(region), 120, "Região");
         Notes = Guard.MaxLength(Trim(notes), 4000, "Observações");
         Tags = tags?.Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length is > 0 and <= 40).Distinct().Take(30).ToList() ?? Tags;
-        NextFollowUpAt = nextFollowUpAt;
     }
+
+    /// <summary>Derivado das tarefas de follow-up abertas (mantido pelo módulo de Tarefas).</summary>
+    public void SetNextFollowUp(DateTimeOffset? at) => NextFollowUpAt = at;
 
     public LeadStageTransition MoveTo(PipelineStage target, ActorKind actorKind, Guid? actorId, string? reason, DateTimeOffset now)
     {

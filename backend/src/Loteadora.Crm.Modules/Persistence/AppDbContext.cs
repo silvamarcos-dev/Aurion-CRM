@@ -1,10 +1,15 @@
 using System.Linq.Expressions;
 using System.Text.Json;
 using Loteadora.Crm.Modules.Audit.Domain;
+using Loteadora.Crm.Modules.BusinessCalendar.Domain;
 using Loteadora.Crm.Modules.Crm.Domain;
 using Loteadora.Crm.Modules.Iam.Domain;
+using Loteadora.Crm.Modules.Macros.Domain;
 using Loteadora.Crm.Modules.Outbox;
 using Loteadora.Crm.Modules.Pipeline.Domain;
+using Loteadora.Crm.Modules.Scheduling.Domain;
+using Loteadora.Crm.Modules.Suggestions.Domain;
+using Loteadora.Crm.Modules.Tasks.Domain;
 using Loteadora.Crm.SharedKernel.Domain;
 using Loteadora.Crm.SharedKernel.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +40,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<AccessLink> AccessLinks => Set<AccessLink>();
 
     public DbSet<SalesPipeline> Pipelines => Set<SalesPipeline>();
     public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
@@ -43,12 +49,29 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<LeadStageTransition> LeadStageTransitions => Set<LeadStageTransition>();
 
+    public DbSet<CalendarSettings> CalendarSettings => Set<CalendarSettings>();
+    public DbSet<Holiday> Holidays => Set<Holiday>();
+    public DbSet<CalendarException> CalendarExceptions => Set<CalendarException>();
+
+    public DbSet<AgentSchedule> AgentSchedules => Set<AgentSchedule>();
+    public DbSet<Absence> Absences => Set<Absence>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<TaskItem> TaskItems => Set<TaskItem>();
+    public DbSet<Macro> Macros => Set<Macro>();
+
+    public DbSet<ChangeSuggestion> Suggestions => Set<ChangeSuggestion>();
+    public DbSet<SuggestionComment> SuggestionComments => Set<SuggestionComment>();
+
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().Where(t => typeof(Entity).IsAssignableFrom(t.ClrType)))
+            modelBuilder.Entity(entityType.ClrType).Ignore(nameof(Entity.DomainEvents));
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
