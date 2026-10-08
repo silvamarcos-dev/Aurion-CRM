@@ -1,0 +1,79 @@
+# Produção: PostgreSQL + API + site + Caddy (HTTPS automático via Let's Encrypt).
+# Só o Caddy expõe portas (80/443). Banco e API ficam na rede interna.
+#
+#   cp .env.example .env   # preencha os valores
+#   docker compose up -d --build
+
+name: crm-loteadora
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?defina APP_DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: Host=db;Database=crm;Username=crm_app;Password=${APP_DB_PASSWORD}
+      Auth__SigningKey: ${JWT_SIGNING_KEY:?defina JWT_SIGNING_KEY (48+ caracteres aleatórios)}
+      Database__MigrateOnStartup: "true"
+      Network__TrustedNetworks: 172.28.0.0/16
+      Bootstrap__OrganizationName: ${BOOTSTRAP_ORG_NAME:-}
+      Bootstrap__OrganizationSlug: ${BOOTSTRAP_ORG_SLUG:-principal}
+      Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Bootstrap__AdminName: ${BOOTSTRAP_ADMIN_NAME:-Administrador}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      Seed__DemoData: ${SEED_DEMO_DATA:-false}
+      Seed__Password: ${SEED_PASSWORD:-}
+    networks: [internal]
+
+  web:
+    build: ../web
+    restart: unless-stopped
+    depends_on: [api]
+    environment:
+      CRM_API_URL: http://api:8080
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN (ex.: crm.suaempresa.com.br)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+
+networks:
+  internal:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

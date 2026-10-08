@@ -52,6 +52,13 @@ Acesse http://localhost:3100. Usuários de demonstração (senha = `Seed:Passwor
 | corretor2@demo.local | Corretor (Time Sul) | próprios leads |
 | admin@outra.local | Administrador de **outra** organização | — (para testar isolamento) |
 
+## Publicação
+
+- **Demonstração rápida (link temporário a partir deste PC):** `powershell -ExecutionPolicy Bypass -File scripts\publicar-tunel.ps1`
+- **Servidor definitivo (Docker + HTTPS automático):** pasta `deploy/`
+
+Detalhes, segurança e checklist em [docs/publicacao.md](docs/publicacao.md).
+
 ## Testes
 
 ```bash

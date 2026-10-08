@@ -1,4 +1,4 @@
-# Sobe o ambiente de desenvolvimento: API (.NET) em :5180 e frontend (Next.js) em :3100.
+﻿# Sobe o ambiente de desenvolvimento: API (.NET) em :5180 e frontend (Next.js) em :3100.
 # Cada um abre em uma janela própria do PowerShell; feche a janela para parar.
 
 $root = $PSScriptRoot

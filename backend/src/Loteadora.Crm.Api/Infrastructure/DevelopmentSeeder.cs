@@ -145,20 +145,59 @@ public sealed class DevelopmentSeeder(AppDbContext db, OrganizationProvisioning 
 
 public static class DatabaseStartup
 {
-    public static async Task MigrateAndSeedDevelopmentAsync(this IServiceProvider services, IConfiguration configuration)
+    /// <summary>
+    /// Inicialização do banco em qualquer ambiente:
+    ///  - migrations: sempre em Development; em outros ambientes só com Database:MigrateOnStartup=true;
+    ///  - dados FICTÍCIOS de demonstração: Development, ou Seed:DemoData=true (servidor de demonstração);
+    ///  - bootstrap de produção: cria a organização e o primeiro administrador quando o banco está vazio
+    ///    e Bootstrap:* está configurado (sem dados de exemplo).
+    /// </summary>
+    public static async Task InitializeDatabaseAsync(this WebApplication app)
     {
-        await using var scope = services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
+        var configuration = app.Configuration;
+        await using var scope = app.Services.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        var logger = sp.GetRequiredService<ILogger<DevelopmentSeeder>>();
+        var db = sp.GetRequiredService<AppDbContext>();
 
-        var password = configuration["Seed:Password"];
-        if (string.IsNullOrWhiteSpace(password))
+        if (app.Environment.IsDevelopment() || configuration.GetValue("Database:MigrateOnStartup", false))
+            await db.Database.MigrateAsync();
+
+        var demoData = app.Environment.IsDevelopment() || configuration.GetValue("Seed:DemoData", false);
+        var seedPassword = configuration["Seed:Password"];
+        if (demoData)
         {
-            scope.ServiceProvider.GetRequiredService<ILogger<DevelopmentSeeder>>()
-                .LogWarning("Seed:Password não configurada — dados de desenvolvimento não serão criados.");
-            return;
+            if (string.IsNullOrWhiteSpace(seedPassword))
+                logger.LogWarning("Seed:Password não configurada — dados de demonstração não serão criados.");
+            else
+                await sp.GetRequiredService<DevelopmentSeeder>().SeedAsync(seedPassword, CancellationToken.None);
         }
 
-        await scope.ServiceProvider.GetRequiredService<DevelopmentSeeder>().SeedAsync(password, CancellationToken.None);
+        await BootstrapAsync(sp, configuration, logger);
+    }
+
+    private static async Task BootstrapAsync(IServiceProvider sp, IConfiguration configuration, ILogger logger)
+    {
+        var section = configuration.GetSection("Bootstrap");
+        var adminEmail = section["AdminEmail"];
+        if (string.IsNullOrWhiteSpace(adminEmail))
+            return;
+
+        var db = sp.GetRequiredService<AppDbContext>();
+        if (await db.Organizations.AnyAsync())
+            return;
+
+        var password = section["AdminPassword"] ?? "";
+        if (password.Length < 12)
+            throw new InvalidOperationException("Bootstrap:AdminPassword deve ter pelo menos 12 caracteres.");
+
+        await sp.GetRequiredService<OrganizationProvisioning>().ProvisionAsync(
+            section["OrganizationName"] ?? "Minha Loteadora",
+            section["OrganizationSlug"] ?? "principal",
+            [new ProvisionedUser(adminEmail, section["AdminName"] ?? "Administrador", SystemRoles.Admin, null)],
+            password,
+            CancellationToken.None);
+
+        logger.LogInformation("Organização inicial criada com o administrador configurado em Bootstrap:AdminEmail.");
     }
 }

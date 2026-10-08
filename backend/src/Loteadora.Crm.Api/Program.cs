@@ -17,21 +17,21 @@ builder.Services.AddScoped<DevelopmentSeeder>();
 
 var app = builder.Build();
 
-// Confia em X-Forwarded-For somente de proxies conhecidos (padrão: loopback, onde roda o BFF em dev).
-// Em produção, configurar KnownProxies/KnownNetworks do BFF/ingress.
-app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+// Confia em X-Forwarded-For somente de proxies conhecidos: loopback (BFF na mesma máquina) e as redes
+// listadas em Network:TrustedNetworks (ex.: a rede interna do Docker onde roda o BFF).
+var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
+foreach (var cidr in (app.Configuration["Network:TrustedNetworks"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    forwarded.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
+app.UseForwardedHeaders(forwarded);
 app.UseExceptionHandler();
 app.UseSecurityHeaders();
 
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-    await app.Services.MigrateAndSeedDevelopmentAsync(app.Configuration);
-}
 else
-{
     app.UseHsts();
-}
+
+await app.InitializeDatabaseAsync();
 
 app.UseAuthentication();
 app.UseRateLimiter();
