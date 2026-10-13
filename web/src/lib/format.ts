@@ -53,4 +53,6 @@ export const actionLabels: Record<string, string> = {
   "task.completed": "Tarefa concluída",
   "task.reopened": "Tarefa reaberta",
   "task.cancelled": "Tarefa cancelada",
+  "message.received": "Mensagem recebida (WhatsApp)",
+  "message.sent": "Mensagem enviada (WhatsApp)",
 };

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Briefcase, CalendarDays, CalendarPlus, CircleCheckBig, History, Mail, Phone, Plus, UserRound } from "lucide-react";
+import { ArrowLeft, Briefcase, MessageCircle, CalendarDays, CalendarPlus, CircleCheckBig, History, Mail, Phone, Plus, UserRound } from "lucide-react";
 import { AppointmentDialog, kindLabels } from "@/components/appointment-dialog";
 import { Avatar } from "@/components/ui/avatar";
 import { StageBadge } from "@/components/ui/stage-badge";
@@ -13,7 +13,7 @@ import { TaskRow } from "@/components/task-row";
 import { formatDayLabel, zonedDate, zonedTime } from "@/lib/time";
 import { api, ApiError } from "@/lib/api";
 import { actionLabels, formatCents, formatDateTime, formatPhone, statusLabels, timeframeLabels } from "@/lib/format";
-import type { Appointment, HistoryItem, LeadDetail, Pipeline, TaskItem, UserSummary } from "@/lib/types";
+import type { Appointment, ConversationSummary, HistoryItem, LeadDetail, Pipeline, TaskItem, UserSummary } from "@/lib/types";
 
 type FormState = {
   fullName: string;
@@ -206,6 +206,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
         </form>
 
         <div className="space-y-6 lg:col-span-2 lg:row-start-2">
+          <LeadConversations leadId={lead.id} />
           <LeadTasks leadId={lead.id} leadName={lead.fullName} />
           <LeadAppointments leadId={lead.id} leadName={lead.fullName} />
         </div>
@@ -343,6 +344,35 @@ function LeadAppointments({ leadId, leadName }: { leadId: string; leadName: stri
         {appointments?.length === 0 && <li className="text-sm text-slate-500">Nenhuma visita agendada.</li>}
       </ul>
       <AppointmentDialog open={open} onClose={() => setOpen(false)} lead={{ id: leadId, name: leadName }} />
+    </section>
+  );
+}
+
+function LeadConversations({ leadId }: { leadId: string }) {
+  const can = useCan();
+  const { data } = useQuery({
+    queryKey: ["conversations", "lead", leadId],
+    queryFn: () => api.get<ConversationSummary[]>(`leads/${leadId}/conversations`),
+    enabled: can("conversations.read"),
+  });
+  if (!can("conversations.read")) return null;
+  return (
+    <section className="card p-5">
+      <h2 className="section-title mb-3 flex items-center gap-2"><MessageCircle className="size-4 text-slate-400" /> Conversas no WhatsApp</h2>
+      <ul className="space-y-2">
+        {data?.map((c) => (
+          <li key={c.id}>
+            <Link href={`/atendimento?c=${c.id}`} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/70 px-3 py-2.5 text-sm hover:border-brand-200 hover:bg-brand-50/40">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-slate-800">{c.lastMessageDirection === "Outbound" ? "Você: " : ""}{c.lastMessagePreview ?? "—"}</span>
+                <span className="block text-xs text-slate-500">{c.channelName} · {formatDateTime(c.lastMessageAt)}</span>
+              </span>
+              {c.unreadCount > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-semibold leading-5 text-white">{c.unreadCount}</span>}
+            </Link>
+          </li>
+        ))}
+        {data?.length === 0 && <li className="text-sm text-slate-500">Nenhuma conversa com este lead ainda.</li>}
+      </ul>
     </section>
   );
 }

@@ -51,6 +51,8 @@ api.MapMacroEndpoints();
 api.MapAccessLinkEndpoints();
 api.MapSuggestionEndpoints();
 api.MapDevToolsEndpoints();
+api.MapInboxEndpoints();
+app.MapWhatsAppWebhook();
 
 await app.RunAsync();
 

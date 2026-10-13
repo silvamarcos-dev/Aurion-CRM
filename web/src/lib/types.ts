@@ -302,3 +302,75 @@ export type AuditEntry = {
 
 export type EndpointInfo = { method: string; route: string; group: string; anonymous: boolean };
 export type RoleMatrix = { capabilities: string[]; roles: { role: string; isSystem: boolean; grants: Record<string, string> }[] };
+
+// ───────────── Fase 3: atendimento ─────────────
+
+export type ChannelProvider = "Simulator" | "WhatsAppCloud";
+export type ConversationState = "Open" | "Closed";
+export type MessageStatus = "Received" | "Queued" | "Sent" | "Delivered" | "Read" | "Failed";
+export type MessageType = "Text" | "Template" | "Image" | "Document" | "Audio" | "Video" | "Other";
+
+export type ConversationSummary = {
+  id: string;
+  leadId: string;
+  contactName: string;
+  contactAddress: string;
+  channelId: string;
+  channelName: string;
+  provider: ChannelProvider;
+  state: ConversationState;
+  ownerKind: "Unassigned" | "User" | "Copilot";
+  ownerUserId: string | null;
+  ownerName: string | null;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  lastMessageDirection: "Inbound" | "Outbound" | null;
+  unreadCount: number;
+  windowEndsAt: string | null;
+  stageId: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  direction: "Inbound" | "Outbound";
+  authorKind: "Lead" | "User" | "Copilot" | "System";
+  authorUserId: string | null;
+  authorName: string | null;
+  type: MessageType;
+  body: string;
+  templateName: string | null;
+  status: MessageStatus;
+  failureReason: string | null;
+  occurredAt: string;
+  deliveredAt: string | null;
+  readAt: string | null;
+};
+
+export type MessageTemplate = { id: string; name: string; language: string; body: string; parameterCount: number };
+
+export type ConversationDetail = {
+  conversation: ConversationSummary;
+  withinWindow: boolean;
+  canReply: boolean;
+  contentHidden: boolean;
+  messages: ChatMessage[];
+  templates: MessageTemplate[];
+};
+
+export type InboxCounters = { mineUnread: number; unassigned: number };
+
+export type Channel = {
+  id: string;
+  provider: ChannelProvider;
+  name: string;
+  phoneNumber: string;
+  phoneNumberId: string | null;
+  defaultOwnerUserId: string;
+  defaultOwnerName: string | null;
+  status: "Active" | "Disabled";
+  hasCredentials: boolean;
+  templateCount: number;
+  createdAt: string;
+};
+
+export type WebhookSetup = { appSecretConfigured: boolean; verifyTokenConfigured: boolean; callbackPath: string };

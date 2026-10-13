@@ -1,6 +1,9 @@
 using Loteadora.Crm.Modules.Audit;
 using Loteadora.Crm.Modules.BusinessCalendar.Application;
 using Loteadora.Crm.Modules.DevTools;
+using Loteadora.Crm.Modules.Inbox.Application;
+using Loteadora.Crm.Modules.Inbox.Providers;
+using Microsoft.AspNetCore.DataProtection;
 using Loteadora.Crm.Modules.Macros.Application;
 using Loteadora.Crm.Modules.Suggestions.Application;
 using Loteadora.Crm.Modules.Scheduling.Application;
@@ -65,8 +68,26 @@ public static class ModulesRegistration
         services.AddScoped<SuggestionService>();
         services.AddScoped<DevToolsService>();
 
+        // Atendimento / WhatsApp
+        var dataProtection = services.AddDataProtection().SetApplicationName("loteadora-crm");
+        if (configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        services.Configure<WhatsAppOptions>(configuration.GetSection(WhatsAppOptions.Section));
+        services.AddSingleton<IMessagingProvider, SimulatorProvider>();
+        services.AddHttpClient<WhatsAppCloudProvider>(c => c.Timeout = TimeSpan.FromSeconds(20));
+        services.AddTransient<IMessagingProvider>(sp => sp.GetRequiredService<WhatsAppCloudProvider>());
+        services.AddScoped<MessagingProviderRegistry>();
+        services.AddScoped<InboundIngestion>();
+        services.AddScoped<ConversationService>();
+        services.AddScoped<ChannelService>();
+        services.AddScoped<SimulatorService>();
+        services.AddScoped<WebhookReceiver>();
+
         if (runOutboxDispatcher)
+        {
             services.AddHostedService<OutboxDispatcher>();
+            services.AddHostedService<WebhookProcessor>();
+        }
 
         return services;
     }

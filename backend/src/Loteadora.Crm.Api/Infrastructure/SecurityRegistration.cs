@@ -78,6 +78,11 @@ public static class SecurityRegistration
                 http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = authPermitPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 
+            // Webhooks de provedores: por IP, generoso (a Meta envia em rajadas).
+            options.AddPolicy(Endpoints.InboxEndpoints.WebhookRateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+
             // API geral: por usuário autenticado (ou IP).
             options.AddPolicy(UserRateLimitPolicy, http => RateLimitPartition.GetTokenBucketLimiter(
                 http.User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? http.Connection.RemoteIpAddress?.ToString() ?? "anon",

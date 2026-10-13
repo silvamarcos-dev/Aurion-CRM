@@ -22,6 +22,9 @@ public sealed class CrmApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
     private string _adminConnectionString = default!;
 
     public string Password { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(18));
+    public string WhatsAppAppSecret { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+    public string WhatsAppVerifyToken { get; } = "verify-" + Guid.NewGuid().ToString("N");
+    public FakeGraphApiHandler FakeGraphApi { get; } = new();
     public ProvisionedOrganization OrgA { get; private set; } = default!;
     public ProvisionedOrganization OrgB { get; private set; } = default!;
 
@@ -65,14 +68,21 @@ public sealed class CrmApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         builder.UseSetting("Auth:SigningKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)));
         builder.UseSetting("RateLimiting:AuthPermitPerMinute", "10000");
         builder.UseSetting("Auth:RefreshReuseGracePeriod", "00:00:00");
+        builder.UseSetting("WhatsApp:AppSecret", WhatsAppAppSecret);
+        builder.UseSetting("WhatsApp:VerifyToken", WhatsAppVerifyToken);
+        builder.UseSetting("WhatsApp:GraphApiBaseUrl", "https://graph.test/");
         builder.ConfigureServices(services =>
         {
-            // O dispatcher do outbox é exercitado explicitamente nos testes.
-            var hosted = services.Where(d => d.ImplementationType == typeof(Modules.Outbox.OutboxDispatcher)).ToList();
+            // Dispatcher do outbox e processador de webhooks são exercitados explicitamente nos testes.
+            var hosted = services.Where(d => d.ImplementationType == typeof(Modules.Outbox.OutboxDispatcher)
+                                             || d.ImplementationType == typeof(Modules.Inbox.Application.WebhookProcessor)).ToList();
             foreach (var d in hosted)
                 services.Remove(d);
 
             services.AddSingleton<Modules.BusinessCalendar.Application.IHolidayProvider, FakeHolidayProvider>();
+
+            // Graph API da Meta falsa: nenhuma chamada sai da máquina; as requisições ficam registradas.
+            services.AddHttpClient<Modules.Inbox.Providers.WhatsAppCloudProvider>().ConfigurePrimaryHttpMessageHandler(() => FakeGraphApi);
         });
     }
 

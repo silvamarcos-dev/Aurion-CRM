@@ -38,7 +38,7 @@ Navegador ──cookie httpOnly──► Next.js (UI + BFF) ──Bearer JWT─�
 | BusinessCalendarService (expediente, feriados, exceções, cobertura do Copilot) | `calendar` | ✅ Fase 2 |
 | Agenda (jornada, ausências, visitas, disponibilidade) | `scheduling` | ✅ Fase 2 |
 | Tarefas / follow-ups, Macros | `tasks`, `macros` | ✅ Fase 2 |
-| Inbox + WhatsApp (provider Meta) | `inbox`, `channels` | ⏳ Fase 3 |
+| Atendimento: canais, conversas, mensagens, templates, webhook da Meta | `inbox` | ✅ Fase 3 |
 | Automações (trigger → condições → ações) | `automation` | ⏳ Fase 4 |
 | Call Manager | `telephony` | ⏳ Fase 5 |
 | Copilot (orchestrator, policy engine, tools, conhecimento) | `copilot`, `knowledge` | ⏳ Fases 6–9 |
@@ -100,6 +100,35 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 - `Lead.NextFollowUpAt` é **derivado** da tarefa aberta mais próxima do lead e recalculado na mesma transação. Concluir um follow-up, ligação ou mensagem registra o último contato.
 - **Macros:** template com **lista branca** de variáveis (`{{lead.first_name}}`, `{{agent.name}}`…). Variável desconhecida é recusada ao salvar, e o valor é inserido literalmente, sem reavaliação. A renderização exige que o lead esteja no escopo do usuário, então uma macro não vaza dados. Nada é enviado; o envio entra na Fase 3.
 
+## Atendimento / WhatsApp (Fase 3)
+
+- **Provedor intercambiável:** a interface `IMessagingProvider` tem duas implementações, `SimulatorProvider` (nada sai do servidor) e `WhatsAppCloudProvider` (Cloud API da Meta). A regra de negócio não conhece a API da Meta.
+- **Entrada única:** o webhook da Meta e o "Simular cliente" passam pela mesma `InboundIngestion`, nesta ordem:
+  1. idempotência pelo `wamid`;
+  2. contato pelo telefone, depois lead aberto (ou criação de lead novo, "Novo lead", para o responsável padrão do canal);
+  3. conversa do lead no canal;
+  4. mensagem, último contato e evento `MessageReceived` no outbox.
+
+  Um lock por (organização, telefone) evita leads duplicados com entregas simultâneas.
+- **Webhook:**
+  - `POST /api/webhooks/whatsapp` no site é só um repasse do corpo exato para a API (`/webhooks/whatsapp`, que não fica exposta);
+  - a API valida `X-Hub-Signature-256` (HMAC-SHA256 com o App Secret, comparação em tempo constante), grava o bruto deduplicado por hash e responde na hora;
+  - o `WebhookProcessor` processa em segundo plano com retry;
+  - o tenant é resolvido pelo **Phone Number ID do canal cadastrado** (único no sistema), nunca por dados livres do payload.
+- **Envio:**
+  - **idempotente** por `clientMessageId`;
+  - a mensagem é gravada (`Queued`) **antes** de chamar o provedor e depois marcada como `Sent` ou `Failed` (com "Reenviar");
+  - status `Delivered`/`Read` só avançam, mesmo com webhooks fora de ordem.
+- **Janela de 24h:** fora dela só é possível enviar **template aprovado**. A regra vale também no simulador, para treinar a equipe.
+- **Credenciais:** o token da Meta é cifrado com ASP.NET Data Protection e nunca é devolvido pela API. Em produção, defina `DataProtection__KeysPath` num volume persistente. App Secret e Verify Token ficam nas variáveis `WhatsApp__AppSecret` e `WhatsApp__VerifyToken`.
+- **Privacidade:**
+  - visibilidade da conversa = visibilidade do lead (`conversations.read` com escopo);
+  - sem `pii.view`, conteúdo das mensagens, nome e telefone ficam ocultos;
+  - a auditoria registra recebimentos, envios e aberturas de conversa **sem o conteúdo**;
+  - o payload bruto do webhook contém dados pessoais e precisa de retenção curta (pendência da política de retenção).
+- **Base para o Copilot (Fase 8):** a conversa guarda dono (`OwnerKind`: usuário, Copilot ou sem dono) e `OwnershipEpoch`, que serão usados no takeover após 15 minutos.
+- **Tempo real:** a tela consulta a cada 3 a 5 segundos. SignalR ou SSE ficam para quando o volume justificar.
+
 ## Acessos externos, sugestões e painel do desenvolvedor
 
 ### Modo visitante e modo desenvolvedor
@@ -129,7 +158,7 @@ O Copilot (fases futuras) age como `ActorKind.Copilot` em nome de um corretor. S
 | **1 — CRM + Kanban** ✅ | Leads, contatos, pipeline configurável, Kanban, histórico | Uso interno sem IA |
 | **2 — Agenda e rotina** ✅ | BusinessCalendarService (NodaTime, feriados), jornada do corretor, visitas, tarefas, macros | Agenda real |
 | **2.5 — Acessos externos** ✅ | Modo visitante/desenvolvedor por link, mascaramento de dados pessoais, sugestões de mudança, painel técnico | Compartilhar e colaborar com segurança |
-| 3 — Atendimento humano | Inbox, provider WhatsApp (webhook HMAC, idempotência, janela de 24h, templates) | Conversas no CRM |
+| **3 — Atendimento humano** ✅ | Inbox, provider WhatsApp (webhook HMAC, idempotência, janela de 24h, templates) | Conversas no CRM |
 | 4 — Automações | Motor de regras, gatilhos temporais em dias úteis, painel de execuções | Rotina automatizada |
 | 5 — Call Manager | Filas, campanhas, scripts, resultados configuráveis | Cold call |
 | 6 — Copilot N0/N1 | Base de conhecimento (pgvector), RAG com citação, sugestões aprovadas pelo corretor | IA observando e sugerindo |

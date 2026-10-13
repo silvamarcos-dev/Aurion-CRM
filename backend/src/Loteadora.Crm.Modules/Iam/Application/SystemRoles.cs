@@ -35,6 +35,7 @@ public static class SystemRoles
             [MacrosUse] = CapabilityScope.Org, [MacrosManage] = CapabilityScope.Org,
             [PiiView] = CapabilityScope.Org,
             [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+            [ConversationsRead] = CapabilityScope.Team, [ConversationsReply] = CapabilityScope.Team, [ConversationsAssign] = CapabilityScope.Team,
         },
         Agent => new Dictionary<string, CapabilityScope>
         {
@@ -45,18 +46,21 @@ public static class SystemRoles
             [MacrosUse] = CapabilityScope.Org, [MacrosManage] = CapabilityScope.Own,
             [PiiView] = CapabilityScope.Org,
             [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+            [ConversationsRead] = CapabilityScope.Own, [ConversationsReply] = CapabilityScope.Own,
         },
         Visitor => new Dictionary<string, CapabilityScope>
         {
             [LeadsRead] = CapabilityScope.Org, [CalendarRead] = CapabilityScope.Org, [TasksRead] = CapabilityScope.Org,
             [MacrosUse] = CapabilityScope.Org,
             [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Own,
+            [ConversationsRead] = CapabilityScope.Org,
         },
         Developer => new Dictionary<string, CapabilityScope>
         {
             [LeadsRead] = CapabilityScope.Org, [CalendarRead] = CapabilityScope.Org, [TasksRead] = CapabilityScope.Org,
             [MacrosUse] = CapabilityScope.Org, [AuditRead] = CapabilityScope.Org, [Capabilities.DevTools] = CapabilityScope.Org,
             [SuggestionsCreate] = CapabilityScope.Own, [SuggestionsRead] = CapabilityScope.Org, [SuggestionsManage] = CapabilityScope.Org,
+            [ConversationsRead] = CapabilityScope.Org,
         },
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Papel de sistema desconhecido."),
     };

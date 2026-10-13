@@ -1,5 +1,7 @@
 using Loteadora.Crm.Modules.BusinessCalendar.Domain;
 using Loteadora.Crm.Modules.Crm.Application;
+using Loteadora.Crm.Modules.Inbox.Application;
+using Loteadora.Crm.Modules.Inbox.Domain;
 using Loteadora.Crm.Modules.Macros.Application;
 using Loteadora.Crm.Modules.Scheduling.Application;
 using Loteadora.Crm.Modules.Scheduling.Domain;
@@ -21,10 +23,49 @@ public sealed class DevelopmentSeeder(AppDbContext db, OrganizationProvisioning 
     public async Task SeedAsync(string password, CancellationToken ct)
     {
         if (await db.Organizations.AnyAsync(ct))
-        {
             await SeedRoutineForExistingDemoAsync(ct);
+        else
+            await SeedFreshAsync(password, ct);
+
+        await SeedInboxForDemoAsync(ct);
+    }
+
+    /// <summary>Fase 3: canal de WhatsApp simulado, templates e conversas de exemplo (uma única vez).</summary>
+    private async Task SeedInboxForDemoAsync(CancellationToken ct)
+    {
+        var demoOrg = await db.Organizations.FirstOrDefaultAsync(o => o.Slug == "demo", ct);
+        if (demoOrg is null || await db.Channels.IgnoreQueryFilters().AnyAsync(c => c.OrganizationId == demoOrg.Id, ct))
             return;
-        }
+
+        await using var scope = scopes.CreateAsyncScope();
+        var sp = scope.ServiceProvider;
+        sp.GetRequiredService<RequestContext>().InitializeSystem(demoOrg.Id, Capabilities.All.ToDictionary(c => c, _ => CapabilityScope.Org));
+        var scopedDb = sp.GetRequiredService<AppDbContext>();
+        var owner = await (from m in scopedDb.Memberships
+                           join u in scopedDb.Users on m.UserId equals u.Id
+                           where u.Email == "corretor1@demo.local"
+                           select (Guid?)u.Id).FirstOrDefaultAsync(ct);
+        if (owner is null)
+            return;
+
+        var channels = sp.GetRequiredService<ChannelService>();
+        var channelId = await channels.CreateAsync(new SaveChannelCommand(ChannelProvider.Simulator, "WhatsApp (simulado)", "11900000000", null, owner.Value, null), ct);
+        await channels.CreateTemplateAsync(channelId, new SaveTemplateCommand("retomar_contato", "pt_BR",
+            "Olá, {{1}}! Aqui é {{2}}, da Loteadora Demo. Podemos continuar nossa conversa sobre o seu lote?"), ct);
+        await channels.CreateTemplateAsync(channelId, new SaveTemplateCommand("confirmacao_visita", "pt_BR",
+            "Olá, {{1}}! Sua visita ao empreendimento está confirmada para {{2}}. Qualquer dúvida, é só responder."), ct);
+
+        var simulator = sp.GetRequiredService<SimulatorService>();
+        await simulator.InboundAsync(new SimulateInboundCommand(channelId, "11987650001", "João Pereira",
+            "Oi! Vi o anúncio do Residencial Primavera. Ainda tem lote de esquina disponível?"), ct);
+        await simulator.InboundAsync(new SimulateInboundCommand(channelId, "11912345678", "Patrícia Ramos",
+            "Boa tarde! Quanto custa o lote de 300 m² e quais são as condições de pagamento?"), ct);
+
+        logger.LogInformation("Atendimento (Fase 3): canal simulado e conversas de exemplo criados na organização 'demo'.");
+    }
+
+    private async Task SeedFreshAsync(string password, CancellationToken ct)
+    {
 
         var demo = await provisioning.ProvisionAsync("Loteadora Demo", "demo",
         [

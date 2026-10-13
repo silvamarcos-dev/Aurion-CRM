@@ -42,6 +42,13 @@ services:
       Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       Seed__DemoData: ${SEED_DEMO_DATA:-false}
       Seed__Password: ${SEED_PASSWORD:-}
+      # WhatsApp oficial (Meta): App Secret valida a assinatura dos webhooks; Verify Token é o da configuração do webhook.
+      WhatsApp__AppSecret: ${WHATSAPP_APP_SECRET:-}
+      WhatsApp__VerifyToken: ${WHATSAPP_VERIFY_TOKEN:-}
+      # Chaves que cifram os tokens dos canais: precisam sobreviver a reinícios/atualizações.
+      DataProtection__KeysPath: /keys
+    volumes:
+      - dp-keys:/keys
     networks: [internal]
 
   web:
@@ -74,6 +81,7 @@ networks:
         - subnet: 172.28.0.0/16
 
 volumes:
+  dp-keys:
   db-data:
   caddy-data:
   caddy-config:

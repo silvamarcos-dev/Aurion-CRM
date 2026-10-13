@@ -9,7 +9,7 @@ import { API_BASE_URL, clearTokens, readTokens, refreshTokens, storeTokens } fro
  * - Apenas prefixos de rota conhecidos são encaminhados.
  * A AUTORIZAÇÃO continua sendo responsabilidade exclusiva da API.
  */
-const ALLOWED_ROOTS = new Set(["me", "users", "leads", "board", "pipelines", "calendar", "agenda", "appointments", "tasks", "macros", "access-links", "suggestions", "dev"]);
+const ALLOWED_ROOTS = new Set(["me", "users", "leads", "board", "pipelines", "calendar", "agenda", "appointments", "tasks", "macros", "access-links", "suggestions", "dev", "conversations", "channels", "simulator"]);
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 

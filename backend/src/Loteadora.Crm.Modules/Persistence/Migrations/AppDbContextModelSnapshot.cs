@@ -934,6 +934,421 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                     b.ToTable("users", "iam");
                 });
 
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Channel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DefaultOwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_owner_user_id");
+
+                    b.Property<string>("EncryptedAccessToken")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("encrypted_access_token");
+
+                    b.Property<string>("ExternalAccountId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("external_account_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("PhoneNumberE164")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("phone_number_e164");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_channels");
+
+                    b.HasIndex("DefaultOwnerUserId")
+                        .HasDatabaseName("ix_channels_default_owner_user_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_channels_organization_id");
+
+                    b.HasIndex("Provider", "ExternalAccountId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_channels_provider_external_account_id")
+                        .HasFilter("external_account_id IS NOT NULL");
+
+                    b.ToTable("channels", "inbox");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("channel_id");
+
+                    b.Property<string>("ContactAddress")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("contact_address");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("LastInboundAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_inbound_at");
+
+                    b.Property<DateTimeOffset?>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_message_at");
+
+                    b.Property<string>("LastMessageDirection")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("last_message_direction");
+
+                    b.Property<string>("LastMessagePreview")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("last_message_preview");
+
+                    b.Property<DateTimeOffset?>("LastOutboundAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_outbound_at");
+
+                    b.Property<Guid>("LeadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lead_id");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("OwnerKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("owner_kind");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<int>("OwnershipEpoch")
+                        .HasColumnType("integer")
+                        .HasColumnName("ownership_epoch");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("state");
+
+                    b.Property<int>("UnreadCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("unread_count");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_conversations");
+
+                    b.HasIndex("ChannelId")
+                        .HasDatabaseName("ix_conversations_channel_id");
+
+                    b.HasIndex("ContactId")
+                        .HasDatabaseName("ix_conversations_contact_id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_conversations_organization_id");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_conversations_owner_user_id");
+
+                    b.HasIndex("LeadId", "ChannelId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_conversations_lead_id_channel_id");
+
+                    b.HasIndex("OrganizationId", "OwnerUserId", "LastMessageAt")
+                        .HasDatabaseName("ix_conversations_organization_id_owner_user_id_last_message_at");
+
+                    b.HasIndex("OrganizationId", "State", "LastMessageAt")
+                        .HasDatabaseName("ix_conversations_organization_id_state_last_message_at");
+
+                    b.ToTable("conversations", "inbox");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.InboundWebhook", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset>("AvailableAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("available_at");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("event_key");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inbound_webhooks");
+
+                    b.HasIndex("AvailableAt")
+                        .HasDatabaseName("ix_inbound_webhooks_available_at")
+                        .HasFilter("processed_at IS NULL");
+
+                    b.HasIndex("Provider", "EventKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_inbound_webhooks_provider_event_key");
+
+                    b.ToTable("inbound_webhooks", "inbox");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthorKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("author_kind");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("ClientMessageId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_message_id");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("delivered_at");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("direction");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("external_id");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<bool>("IsFromLead")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_from_lead");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TemplateName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("template_name");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_messages");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_messages_organization_id");
+
+                    b.HasIndex("ConversationId", "ClientMessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_messages_conversation_id_client_message_id")
+                        .HasFilter("client_message_id IS NOT NULL");
+
+                    b.HasIndex("ConversationId", "OccurredAt")
+                        .HasDatabaseName("ix_messages_conversation_id_occurred_at");
+
+                    b.HasIndex("OrganizationId", "ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_messages_organization_id_external_id")
+                        .HasFilter("external_id IS NOT NULL");
+
+                    b.ToTable("messages", "inbox");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.MessageTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("body");
+
+                    b.Property<Guid>("ChannelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("channel_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("language");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("organization_id");
+
+                    b.Property<int>("ParameterCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("parameter_count");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_message_templates");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("ix_message_templates_organization_id");
+
+                    b.HasIndex("ChannelId", "Name", "Language")
+                        .IsUnique()
+                        .HasDatabaseName("ix_message_templates_channel_id_name_language");
+
+                    b.ToTable("message_templates", "inbox");
+                });
+
             modelBuilder.Entity("Loteadora.Crm.Modules.Macros.Domain.Macro", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1766,6 +2181,66 @@ namespace Loteadora.Crm.Modules.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_teams_organizations_organization_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Channel", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultOwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_channels_users_default_owner_user_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Conversation", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Inbox.Domain.Channel", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversations_channels_channel_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Crm.Domain.Contact", null)
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversations_contacts_contact_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Crm.Domain.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_conversations_leads_lead_id");
+
+                    b.HasOne("Loteadora.Crm.Modules.Iam.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_conversations_users_owner_user_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.Message", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Inbox.Domain.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_messages_conversations_conversation_id");
+                });
+
+            modelBuilder.Entity("Loteadora.Crm.Modules.Inbox.Domain.MessageTemplate", b =>
+                {
+                    b.HasOne("Loteadora.Crm.Modules.Inbox.Domain.Channel", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_message_templates_channels_channel_id");
                 });
 
             modelBuilder.Entity("Loteadora.Crm.Modules.Macros.Domain.Macro", b =>

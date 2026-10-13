@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { AccessLinksPanel } from "@/components/access-links-panel";
+import { ChannelsPanel } from "@/components/channels-panel";
 import { useCan, useToast } from "@/components/providers";
 import { PageHeader, Tabs } from "@/components/ui/page-header";
 import { toApiTime, WeeklyHoursEditor } from "@/components/weekly-hours-editor";
@@ -11,7 +12,7 @@ import { formatDateTime } from "@/lib/format";
 import { addDays, formatDayLabel, todayInZone, zonedToIso } from "@/lib/time";
 import type { Absence, AbsenceKind, AgentSchedule, Agenda, CalendarExceptionItem, CalendarSettings, CalendarStatus, Holiday } from "@/lib/types";
 
-type Tab = "jornada" | "empresa" | "feriados" | "excecoes" | "acessos";
+type Tab = "jornada" | "empresa" | "feriados" | "excecoes" | "canais" | "acessos";
 
 export default function SettingsPage() {
   const can = useCan();
@@ -22,7 +23,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const sync = () => {
       const hash = window.location.hash.slice(1) as Tab;
-      if (["jornada", "empresa", "feriados", "excecoes", "acessos"].includes(hash)) setTab(hash);
+      if (["jornada", "empresa", "feriados", "excecoes", "canais", "acessos"].includes(hash)) setTab(hash);
     };
     sync();
     window.addEventListener("hashchange", sync);
@@ -33,6 +34,7 @@ export default function SettingsPage() {
     { key: "empresa", label: "Expediente da empresa", show: can("calendar.read") },
     { key: "feriados", label: "Feriados", show: can("calendar.read") },
     { key: "excecoes", label: "Exceções", show: can("calendar.read") },
+    { key: "canais", label: "Canais", show: can("channels.manage") },
     { key: "acessos", label: "Acessos externos", show: can("users.manage") },
   ];
 
@@ -47,6 +49,7 @@ export default function SettingsPage() {
           {tab === "empresa" && <CompanyHours editable={admin} />}
           {tab === "feriados" && <Holidays editable={admin} />}
           {tab === "excecoes" && <Exceptions editable={admin} />}
+          {tab === "canais" && <ChannelsPanel />}
           {tab === "acessos" && <AccessLinksPanel />}
         </div>
       </div>

@@ -16,6 +16,8 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
     DOTNET_CLI_TELEMETRY_OPTOUT=1
 EXPOSE 8080
+# Pasta das chaves de Data Protection (volume): criada com o dono certo para o usuário sem privilégios.
+RUN mkdir -p /keys && chown $APP_UID /keys
 # Usuário sem privilégios fornecido pela imagem oficial.
 USER $APP_UID
 ENTRYPOINT ["dotnet", "Loteadora.Crm.Api.dll"]

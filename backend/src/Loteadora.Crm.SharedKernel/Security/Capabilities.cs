@@ -48,6 +48,21 @@ public static class Capabilities
     public const string SuggestionsRead = "suggestions.read";
     public const string SuggestionsManage = "suggestions.manage";
 
+    /// <summary>Ver conversas (escopo aplicado ao dono do lead).</summary>
+    public const string ConversationsRead = "conversations.read";
+
+    /// <summary>Enviar mensagens ao lead.</summary>
+    public const string ConversationsReply = "conversations.reply";
+
+    /// <summary>Atribuir conversas a outros usuários.</summary>
+    public const string ConversationsAssign = "conversations.assign";
+
+    /// <summary>Configurar canais (WhatsApp, simulador) e templates.</summary>
+    public const string ChannelsManage = "channels.manage";
+
+    /// <summary>Usar o simulador de cliente (gera mensagens recebidas de teste).</summary>
+    public const string ChannelsSimulate = "channels.simulate";
+
     public const string UsersManage = "users.manage";
     public const string RolesManage = "roles.manage";
     public const string SettingsManage = "settings.manage";
@@ -62,6 +77,7 @@ public static class Capabilities
         MacrosUse, MacrosManage,
         PiiView, DevTools,
         SuggestionsCreate, SuggestionsRead, SuggestionsManage,
+        ConversationsRead, ConversationsReply, ConversationsAssign, ChannelsManage, ChannelsSimulate,
         UsersManage, RolesManage, SettingsManage,
     };
 }

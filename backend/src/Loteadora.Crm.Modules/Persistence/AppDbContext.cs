@@ -4,6 +4,7 @@ using Loteadora.Crm.Modules.Audit.Domain;
 using Loteadora.Crm.Modules.BusinessCalendar.Domain;
 using Loteadora.Crm.Modules.Crm.Domain;
 using Loteadora.Crm.Modules.Iam.Domain;
+using Loteadora.Crm.Modules.Inbox.Domain;
 using Loteadora.Crm.Modules.Macros.Domain;
 using Loteadora.Crm.Modules.Outbox;
 using Loteadora.Crm.Modules.Pipeline.Domain;
@@ -59,6 +60,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ITenant
 
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
     public DbSet<Macro> Macros => Set<Macro>();
+
+    public DbSet<Channel> Channels => Set<Channel>();
+    public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<InboundWebhook> InboundWebhooks => Set<InboundWebhook>();
 
     public DbSet<ChangeSuggestion> Suggestions => Set<ChangeSuggestion>();
     public DbSet<SuggestionComment> SuggestionComments => Set<SuggestionComment>();

@@ -29,9 +29,9 @@ import { useEffect, useRef, useState } from "react";
 import { useCan, useMe } from "@/components/providers";
 import { Avatar } from "@/components/ui/avatar";
 import { api, logout } from "@/lib/api";
-import type { SuggestionStats, TaskItem } from "@/lib/types";
+import type { InboxCounters, SuggestionStats, TaskItem } from "@/lib/types";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; capability?: string; badgeKey?: "overdueTasks" | "newSuggestions" };
+type NavItem = { href: string; label: string; icon: LucideIcon; capability?: string; badgeKey?: "overdueTasks" | "newSuggestions" | "unreadConversations" };
 type NavGroup = { label: string; items: NavItem[] };
 
 const groups: NavGroup[] = [
@@ -40,6 +40,7 @@ const groups: NavGroup[] = [
     items: [
       { href: "/kanban", label: "Funil", icon: Columns3, capability: "leads.read" },
       { href: "/leads", label: "Leads", icon: Users, capability: "leads.read" },
+      { href: "/atendimento", label: "Atendimento", icon: MessageCircle, capability: "conversations.read", badgeKey: "unreadConversations" },
     ],
   },
   {
@@ -61,7 +62,6 @@ const groups: NavGroup[] = [
 ];
 
 const upcoming: { label: string; icon: LucideIcon }[] = [
-  { label: "Atendimento", icon: MessageCircle },
   { label: "Call Manager", icon: PhoneCall },
   { label: "Automações", icon: Workflow },
   { label: "Copilot", icon: Bot },
@@ -83,8 +83,12 @@ export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => setCollapsed(readCollapsed()), []);
-  useEffect(() => setMobileOpen(false), [pathname]);
+  useEffect(() => {
+    setCollapsed(readCollapsed());
+  }, []);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   function toggle() {
     setCollapsed((c) => {
@@ -227,7 +231,7 @@ function NavLink({ item, collapsed, active }: { item: NavItem; collapsed: boolea
       {badge > 0 && (
         <span
           className={`rounded-full bg-red-500 text-[10px] font-semibold text-white ${collapsed ? "absolute right-1.5 top-1 size-2 p-0" : "min-w-5 px-1.5 py-0.5 text-center"}`}
-          aria-label={item.badgeKey === "newSuggestions" ? `${badge} novas` : `${badge} atrasadas`}
+          aria-label={item.badgeKey === "newSuggestions" ? `${badge} novas` : item.badgeKey === "unreadConversations" ? `${badge} não lidas` : `${badge} atrasadas`}
         >
           {collapsed ? "" : badge > 99 ? "99+" : badge}
         </span>
@@ -241,6 +245,13 @@ function useBadge(key?: NavItem["badgeKey"]) {
   const { data: me } = useMe();
   const tasksEnabled = key === "overdueTasks" && can("tasks.read");
   const suggestionsEnabled = key === "newSuggestions" && can("suggestions.manage");
+  const inboxEnabled = key === "unreadConversations" && can("conversations.reply");
+  const inbox = useQuery({
+    queryKey: ["conversations", "counters"],
+    queryFn: () => api.get<InboxCounters>("conversations/counters"),
+    enabled: inboxEnabled,
+    refetchInterval: 15_000,
+  });
   const tasks = useQuery({
     queryKey: ["tasks", "overdue-badge"],
     queryFn: () => api.get<TaskItem[]>("tasks?status=Open&due=Overdue&limit=100"),
@@ -255,6 +266,7 @@ function useBadge(key?: NavItem["badgeKey"]) {
   });
   if (tasksEnabled) return tasks.data?.length ?? 0;
   if (suggestionsEnabled) return suggestions.data?.new ?? 0;
+  if (inboxEnabled) return inbox.data?.mineUnread ?? 0;
   return 0;
 }
 
